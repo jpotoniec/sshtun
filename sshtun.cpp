@@ -140,6 +140,8 @@ void Tunnel::initServer(const char *data, size_t len)
 {
 	const char *name=data;
 	tunnel=init_tunnel(name, "172.16.0.1", "172.16.0.2");
+	char msg[]="srv\x00""172.16.0.2\x00""172.16.0.1";
+	send(1, msg, sizeof(msg));
 }
 
 void Tunnel::deliver(const char *data, size_t len)
@@ -197,12 +199,7 @@ void Tunnel::process(char type, const char *data, size_t len)
 
 void Tunnel::handshake()
 {
-	if(server)
-	{
-		char data[]="srv\x00""172.16.0.2\x00""172.16.0.1";
-		send(1, data, sizeof(data));
-	}
-	else
+	if(!server)
 	{
 		char data[]="client";
 		send(2, data, sizeof(data));
