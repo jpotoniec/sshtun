@@ -63,7 +63,7 @@ void Tunnel::initServer(const char *name, size_t len)
         return;
     }
     std::string msg=cfg.name()+SEP+remoteIp+SEP+cfg.ip();
-    send(MessageType::DHCP, msg.c_str(), msg.length()+1);
+    send(MessageType::DHCP, msg);
     tunnel=init_tunnel(name, cfg.ip(), remoteIp);
 }
 
@@ -124,8 +124,7 @@ void Tunnel::handshake()
 {
     if(!server)
     {
-        const char* data=cfg.name().c_str();
-        send(MessageType::HANDSHAKE, data, strlen(data)+1);
+        send(MessageType::HANDSHAKE, cfg.name());
     }
 }
 

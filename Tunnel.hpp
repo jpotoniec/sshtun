@@ -18,6 +18,10 @@ class Tunnel
         bool server;
         Buffer buffer,tunBuffer;
         void send(MessageType type, const char *data, uint16_t len);
+        void send(MessageType type, const std::string& data)
+        {
+            send(type, data.c_str(), data.length()+1);
+        }
         void process(MessageType type, char *data, size_t len);
         void deliver(const char *data, size_t len);
         void init(char *data, size_t len);
