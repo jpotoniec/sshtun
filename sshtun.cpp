@@ -215,8 +215,10 @@ void Tunnel::work()
 	for(;;)
 	{
 		pollfd fds[]={
-			{tunnel,POLLIN,0},
+			{tunnel,POLLIN|POLLHUP|POLLERR,0},
 			{localIn,POLLIN,0},
+			{localOut,POLLHUP|POLLERR,0},
+			{-1,0,0}
 		};
 		int n=poll(fds, sizeof(fds)/sizeof(fds[0]), -1);
 		if(n<0)
@@ -226,6 +228,9 @@ void Tunnel::work()
 			else
 				throw LibcError("poll");
 		}
+		for(pollfd *i=fds;i->fd>=0;i++)
+			if(i->revents&(POLLHUP|POLLERR))
+				return;
 		if(fds[0].revents&POLLIN)	// pakiet z lokalnego systemu, opakowac i wyekspediowac
 		{
 			tunBuffer.read(tunnel);
