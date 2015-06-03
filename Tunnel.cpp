@@ -12,6 +12,8 @@
 #include <cstdint>
 #include <arpa/inet.h>
 
+const char SEP='\x01';
+
 static int init_tunnel(const std::string& dev, const std::string& local, const std::string& remote)
 {
     fprintf(stderr, "Setting up tunnel %s %s -> %s\n", dev.c_str(), local.c_str(), remote.c_str());
@@ -34,20 +36,35 @@ static int init_tunnel(const std::string& dev, const std::string& local, const s
     return fd;
 }
 
-void Tunnel::init(const char *data, size_t len)
+void Tunnel::init(char *data, size_t len)
 {
-    const char *name=data;
-    const char *src=name+strlen(name)+1;
-    const char *dst=src+strlen(src)+1;
-    tunnel=init_tunnel(name, src, dst);
+    data[len-1]=0;
+    char *ptrs[3];
+    ptrs[0]=data;
+    for(int i=1;i<3;++i)
+    {
+        ptrs[i]=strchr(ptrs[i-1], SEP);
+        if(ptrs[i]==NULL)
+            return;
+        *ptrs[i]='\0';
+        ptrs[i]++;
+    }
+    tunnel=init_tunnel(ptrs[0], ptrs[1], ptrs[2]);
 }
 
-void Tunnel::initServer(const char *data, size_t len)
+void Tunnel::initServer(const char *name, size_t len)
 {
-    const char *name=data;
-    tunnel=init_tunnel(name, "172.16.0.1", "172.16.0.2");
-    char msg[]="srv\x00""172.16.0.2\x00""172.16.0.1";
-    send(1, msg, sizeof(msg));
+    if(name[len-1]!=0)
+        return;
+    std::string remoteIp=cfg.ip(name);
+    if(remoteIp.empty())
+    {
+        throw std::runtime_error(std::string("Unkown client '")+name+"'");
+        return;
+    }
+    std::string msg=cfg.name()+SEP+remoteIp+SEP+cfg.ip();
+    send(1, msg.c_str(), msg.length()+1);
+    tunnel=init_tunnel(name, cfg.ip(), remoteIp);
 }
 
 void Tunnel::deliver(const char *data, size_t len)
@@ -77,14 +94,14 @@ void Tunnel::send(char type, const char *data, uint16_t len)
     do
     {
         CHECK(n=write(localOut, data, len));
-        fprintf(stderr,"Sent %d/%d bytes\n", n, len);
+        fprintf(stderr,"Sent %ld/%d bytes\n", n, len);
         data+=n;
         len-=n;
     }
     while(len>0);
 }
 
-void Tunnel::process(char type, const char *data, size_t len)
+void Tunnel::process(char type, char *data, size_t len)
 {
     switch(type)
     {
@@ -107,8 +124,8 @@ void Tunnel::handshake()
 {
     if(!server)
     {
-        char data[]="client";
-        send(2, data, sizeof(data));
+        const char* data=cfg.name().c_str();
+        send(2, data, strlen(data)+1);
     }
 }
 

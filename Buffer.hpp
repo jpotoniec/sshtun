@@ -45,6 +45,10 @@ class Buffer : private boost::noncopyable
         {
             return _data;
         }
+        char* data()
+        {
+            return _data;
+        }
         void remove(size_t n)
         {
             if(_pos>n)

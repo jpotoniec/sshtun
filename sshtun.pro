@@ -5,7 +5,8 @@ CONFIG -= qt
 
 SOURCES += \
     sshtun.cpp \
-    Tunnel.cpp
+    Tunnel.cpp \
+    IniFile.cpp
 
 include(deployment.pri)
 qtcAddDeployment()
@@ -13,5 +14,7 @@ qtcAddDeployment()
 HEADERS += \
     Buffer.hpp \
     LibcError.hpp \
-    Tunnel.hpp
+    Tunnel.hpp \
+    Config.hpp \
+    IniFile.hpp
 
