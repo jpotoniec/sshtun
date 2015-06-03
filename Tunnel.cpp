@@ -65,6 +65,9 @@ void Tunnel::initServer(const char *name, size_t len)
     std::string msg=cfg.name()+SEP+remoteIp+SEP+cfg.ip();
     send(MessageType::DHCP, msg);
     tunnel=init_tunnel(name, cfg.ip(), remoteIp);
+    for(auto& i:cfg.others())
+        if(name!=i.first)
+            send(MessageType::OTHER, i.second);
 }
 
 void Tunnel::deliver(const char *data, size_t len)
@@ -113,6 +116,9 @@ void Tunnel::process(MessageType type, char *data, size_t len)
             break;
         case MessageType::HANDSHAKE:
             initServer(data,len);
+            break;
+    case MessageType::OTHER:
+            fprintf(stderr,"Other server: '%s'\n", data);
             break;
         default:
             fprintf(stderr,"Ignoring packet of type %d with length %ld\n", type, len);

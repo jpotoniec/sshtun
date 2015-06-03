@@ -32,6 +32,10 @@ public:
     {
         return ini("clients",client);
     }
+    std::map<std::string,std::string> others() const
+    {
+        return ini["others"];
+    }
 private:
     std::string _name;
     IniFile ini;

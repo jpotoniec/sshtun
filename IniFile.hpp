@@ -6,6 +6,7 @@
 class IniFile
 {
 public:
+    typedef std::map<std::string,std::string> Section;
     void load(const std::string& file);
     std::string operator()(const std::string& key) const
     {
@@ -22,8 +23,15 @@ public:
         }
         return "";
     }
+    Section operator[](const std::string& section) const
+    {
+        auto i=values.find(section);
+        if(i!=values.end())
+            return i->second;
+        return Section();
+    }
 private:
-    std::map<std::string,std::map<std::string,std::string>> values;
+    std::map<std::string,Section> values;
 };
 
 #endif // INIFILE_HPP

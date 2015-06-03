@@ -12,7 +12,7 @@ class Tunnel
         { }
         void work();
     private:
-        enum struct MessageType : char {PACKET, DHCP, HANDSHAKE};
+        enum struct MessageType : char {PACKET, DHCP, HANDSHAKE, OTHER};
         const Config &cfg;
         int localIn,localOut,tunnel;
         bool server;
