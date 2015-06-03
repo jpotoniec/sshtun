@@ -63,7 +63,7 @@ void Tunnel::initServer(const char *name, size_t len)
         return;
     }
     std::string msg=cfg.name()+SEP+remoteIp+SEP+cfg.ip();
-    send(1, msg.c_str(), msg.length()+1);
+    send(MessageType::DHCP, msg.c_str(), msg.length()+1);
     tunnel=init_tunnel(name, cfg.ip(), remoteIp);
 }
 
@@ -81,11 +81,11 @@ void Tunnel::deliver(const char *data, size_t len)
     }
 }
 
-void Tunnel::send(char type, const char *data, uint16_t len)
+void Tunnel::send(MessageType type, const char *data, uint16_t len)
 {
     fprintf(stderr,"Sending %d bytes\n", len);
     char buf[3];
-    buf[0]=type;
+    buf[0]=static_cast<char>(type);
     uint16_t x=htons(len);
     memcpy(buf+1, &x, sizeof(x));
     ssize_t n=write(localOut, buf, 3);
@@ -101,17 +101,17 @@ void Tunnel::send(char type, const char *data, uint16_t len)
     while(len>0);
 }
 
-void Tunnel::process(char type, char *data, size_t len)
+void Tunnel::process(MessageType type, char *data, size_t len)
 {
     switch(type)
     {
-        case 0:
+        case MessageType::PACKET:
             deliver(data, len);
             break;
-        case 1:
+        case MessageType::DHCP:
             init(data,len);
             break;
-        case 2:
+        case MessageType::HANDSHAKE:
             initServer(data,len);
             break;
         default:
@@ -125,7 +125,7 @@ void Tunnel::handshake()
     if(!server)
     {
         const char* data=cfg.name().c_str();
-        send(2, data, strlen(data)+1);
+        send(MessageType::HANDSHAKE, data, strlen(data)+1);
     }
 }
 
@@ -154,7 +154,7 @@ void Tunnel::work()
         if(fds[0].revents&POLLIN)	// pakiet z lokalnego systemu, opakowac i wyekspediowac
         {
             tunBuffer.read(tunnel);
-            send(0, tunBuffer.data(), tunBuffer.length());
+            send(MessageType::PACKET, tunBuffer.data(), tunBuffer.length());
             tunBuffer.remove(tunBuffer.length());
         }
         if(fds[1].revents&POLLIN)	// zdalny pakiet, przetworzyc i wykonac albo dostarczyc
@@ -168,7 +168,7 @@ void Tunnel::work()
                 size_t whole=len+3;
                 if(buffer.length()>=whole)
                 {
-                    process(buffer.data()[0], buffer.data()+3, len);
+                    process(static_cast<MessageType>(buffer.data()[0]), buffer.data()+3, len);
                     buffer.remove(whole);
                 }
                 else

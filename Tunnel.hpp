@@ -12,12 +12,13 @@ class Tunnel
         { }
         void work();
     private:
+        enum struct MessageType : char {PACKET, DHCP, HANDSHAKE};
         const Config &cfg;
         int localIn,localOut,tunnel;
         bool server;
         Buffer buffer,tunBuffer;
-        void send(char type, const char *data, uint16_t len);
-        void process(char type, char *data, size_t len);
+        void send(MessageType type, const char *data, uint16_t len);
+        void process(MessageType type, char *data, size_t len);
         void deliver(const char *data, size_t len);
         void init(char *data, size_t len);
         void initServer(const char *data, size_t len);
