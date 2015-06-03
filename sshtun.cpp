@@ -282,12 +282,12 @@ int main(int argc, char **argv)
 {
 	int in=STDIN_FILENO;
 	int out=STDOUT_FILENO;
-	bool server=false;
+	bool server=true;
 	if(argc>1)
 	{
-		//w argv[1] jest proxy command
+		//w argv[1] jest proxy command i w takim razie jestesmy klientem laczacym sie do znanego serwera
 		popen2(argv[1], in, out);
-		server=true;
+		server=false;
 	}
 	CHECK(fcntl(in, F_SETFL, O_NONBLOCK));
 	Tunnel t(in, out, server);
