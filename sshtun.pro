@@ -9,7 +9,8 @@ LIBS += -lpthread
 SOURCES += \
     sshtun.cpp \
     Tunnel.cpp \
-    IniFile.cpp
+    IniFile.cpp \
+    PrivilegedOperations.cpp
 
 include(deployment.pri)
 qtcAddDeployment()
@@ -20,7 +21,8 @@ HEADERS += \
     Tunnel.hpp \
     Config.hpp \
     IniFile.hpp \
-    Logger.hpp
+    Logger.hpp \
+    PrivilegedOperations.hpp
 
 OTHER_FILES += \
     sshtun.ini \

@@ -38,28 +38,6 @@ static pid_t popen2(const char* command, int &in, int &out)
     return pid;
 }
 
-static int init_tunnel(const std::string& dev, const std::string& local, const std::string& remote)
-{
-    Logger::global()->info("Setting up tunnel {} {} -> {}", dev, local, remote);
-    int fd,sock;
-    CHECK(fd=open("/dev/net/tun",O_RDWR));
-    ifreq ifr;
-    memset(&ifr, 0, sizeof(ifr));
-    ifr.ifr_flags = IFF_TUN;
-    strncpy(ifr.ifr_name,dev.c_str(),IFNAMSIZ);
-    CHECK(ioctl(fd, TUNSETIFF, &ifr));
-    CHECK(fcntl(fd, F_SETFL, O_NONBLOCK));
-    CHECK(sock=socket(PF_INET, SOCK_DGRAM, IPPROTO_IP));
-    sockaddr_in addr={AF_INET, 0, inet_addr(local.c_str())};
-    memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
-    CHECK(ioctl(sock, SIOCSIFADDR, &ifr));
-    addr={AF_INET, 0, inet_addr(remote.c_str())};
-    memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
-    CHECK(ioctl(sock, SIOCSIFDSTADDR, &ifr));
-    close(sock);
-    return fd;
-}
-
 Tunnel *Tunnel::globalTunnelPtr=NULL;
 
 void Tunnel::corpseHandler(int)
@@ -74,8 +52,8 @@ void Tunnel::corpseHandler(int)
     }
 }
 
-Tunnel::Tunnel(Config &cfg)
-    :reconnect(false),pid(-1),cfg(cfg),localIn(STDIN_FILENO),localOut(STDOUT_FILENO),tunnel(-1),buffer(10000),tunBuffer(10000)
+Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po)
+    :cfg(cfg),po(po),reconnect(false),pid(-1),localIn(STDIN_FILENO),localOut(STDOUT_FILENO),tunnel(-1),buffer(10000),tunBuffer(10000)
 {
     assert(globalTunnelPtr==NULL);
     signal(SIGCHLD, corpseHandler);
@@ -113,7 +91,7 @@ void Tunnel::init(char *data, size_t len)
         *ptrs[i]='\0';
         ptrs[i]++;
     }
-    tunnel=init_tunnel(ptrs[0], ptrs[1], ptrs[2]);
+    tunnel=po.createTunnel(ptrs[0], ptrs[1], ptrs[2]);
 }
 
 void Tunnel::initServer(const char *name, size_t len)
@@ -128,7 +106,7 @@ void Tunnel::initServer(const char *name, size_t len)
     }
     std::string msg=cfg.name()+SEP+remoteIp+SEP+cfg.ip();
     send(MessageType::DHCP, msg);
-    tunnel=init_tunnel(name, cfg.ip(), remoteIp);
+    tunnel=po.createTunnel(name, cfg.ip(), remoteIp);
     for(auto& i:cfg.others())
         if(name!=i.first)
             send(MessageType::OTHER, i.second);

@@ -3,18 +3,20 @@
 
 #include "Buffer.hpp"
 #include "Config.hpp"
+#include "PrivilegedOperations.hpp"
 
 class Tunnel
 {
     public:
         enum struct MessageType : char {PACKET, DHCP, HANDSHAKE, OTHER};
-        Tunnel(Config &cfg);
+        Tunnel(Config &cfg, PrivilegedOperations& po);
         void work();
     private:
         static Tunnel *globalTunnelPtr;
+        Config &cfg;
+        PrivilegedOperations& po;
         bool reconnect;
         pid_t pid;
-        Config &cfg;
         int localIn,localOut,tunnel;
         Buffer buffer,tunBuffer;
         static void corpseHandler(int);
