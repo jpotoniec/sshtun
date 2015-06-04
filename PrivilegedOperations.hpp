@@ -12,6 +12,7 @@ public:
     void addRoute(const std::string& route);
 private:
     void processAddRoute(const char *route);
+    void processCreateTunnel(const char *name, const char *local, const char *remote);
     int sock;
     std::string router;
     void work();

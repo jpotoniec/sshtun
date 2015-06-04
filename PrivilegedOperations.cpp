@@ -102,28 +102,7 @@ void PrivilegedOperations::work()
         {
             if(p.type==Packet::Type::CREATE_TUNNEL)
             {
-                this->router=p.tunnel.remote;
-                Logger::global()->info("Setting up tunnel {}: {} -> {}", p.tunnel.name, p.tunnel.local, p.tunnel.remote);
-                int fd,helper;
-                CHECK(fd=open("/dev/net/tun",O_RDWR));
-                ifreq ifr;
-                memset(&ifr, 0, sizeof(ifr));
-                ifr.ifr_flags = IFF_TUN;
-                sensibleCopy(ifr.ifr_name,p.tunnel.name,IFNAMSIZ);
-                CHECK(ioctl(fd, TUNSETIFF, &ifr));
-                CHECK(fcntl(fd, F_SETFL, O_NONBLOCK));
-                CHECK(helper=socket(PF_INET, SOCK_DGRAM, IPPROTO_IP));
-                sockaddr_in addr;
-                addr={AF_INET, 0, inet_addr(p.tunnel.local)};
-                memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
-                CHECK(ioctl(helper, SIOCSIFADDR, &ifr));
-                addr={AF_INET, 0, inet_addr(p.tunnel.remote)};
-                memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
-                CHECK(ioctl(helper, SIOCSIFDSTADDR, &ifr));
-                close(helper);
-                sleep(2);   //hack to allow the interface to go up
-                send_fd(sock, fd);
-                close(fd);
+                processCreateTunnel(p.tunnel.name, p.tunnel.local, p.tunnel.remote);
             }
             if(p.type==Packet::Type::ADD_ROUTE)
             {
@@ -136,6 +115,32 @@ void PrivilegedOperations::work()
         }
     }
     exit(0);
+}
+
+void PrivilegedOperations::processCreateTunnel(const char *name, const char *local, const char *remote)
+{
+    this->router=remote;
+    Logger::global()->info("Setting up tunnel {}: {} -> {}", name, local, remote);
+    int fd,helper;
+    CHECK(fd=open("/dev/net/tun",O_RDWR));
+    ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+    ifr.ifr_flags = IFF_TUN;
+    sensibleCopy(ifr.ifr_name,name,IFNAMSIZ);
+    CHECK(ioctl(fd, TUNSETIFF, &ifr));
+    CHECK(fcntl(fd, F_SETFL, O_NONBLOCK));
+    CHECK(helper=socket(PF_INET, SOCK_DGRAM, IPPROTO_IP));
+    sockaddr_in addr;
+    addr={AF_INET, 0, inet_addr(local)};
+    memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
+    CHECK(ioctl(helper, SIOCSIFADDR, &ifr));
+    addr={AF_INET, 0, inet_addr(remote)};
+    memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
+    CHECK(ioctl(helper, SIOCSIFDSTADDR, &ifr));
+    close(helper);
+    sleep(2);   //hack to allow the interface to go up
+    send_fd(sock, fd);
+    close(fd);
 }
 
 void PrivilegedOperations::processAddRoute(const char *route)
