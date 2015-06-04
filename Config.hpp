@@ -9,7 +9,7 @@
 class Config : boost::noncopyable
 {
 public:
-    Config(const IniFile& f)
+    Config(const IniFile& f, const std::string& proxyCommand="")
         :ini(f)
     {
         _name=ini("name");
@@ -19,6 +19,10 @@ public:
             CHECK(gethostname(buf, sizeof(buf)));
             _name=buf;
         }
+        if(proxyCommand.empty())
+            _proxyCommand=ini("server");
+        else
+            _proxyCommand=proxyCommand;
     }
     std::string name() const
     {
@@ -36,9 +40,13 @@ public:
     {
         return ini["others"];
     }
+    void setProxyCommand(const std::string& proxyCommand)
+    {
+        _proxyCommand=proxyCommand;
+    }
     std::string proxyCommand() const
     {
-        return ini("server");
+        return _proxyCommand;
     }
     bool isServer() const
     {
@@ -46,6 +54,7 @@ public:
     }
 private:
     std::string _name;
+    std::string _proxyCommand;
     IniFile ini;
 };
 

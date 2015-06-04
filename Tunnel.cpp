@@ -11,10 +11,12 @@
 #include <stdexcept>
 #include <cstdint>
 #include <arpa/inet.h>
+#include <sys/wait.h>
+#include <cassert>
 
 const char SEP='\x01';
 
-static void popen2(const char* command, int &in, int &out)
+static pid_t popen2(const char* command, int &in, int &out)
 {
     int cmdinput[2],cmdoutput[2];
     CHECK(pipe(cmdinput));	//blocking
@@ -32,6 +34,7 @@ static void popen2(const char* command, int &in, int &out)
         in=cmdoutput[0];
         out=cmdinput[1];
     }
+    return pid;
 }
 
 static int init_tunnel(const std::string& dev, const std::string& local, const std::string& remote)
@@ -56,13 +59,43 @@ static int init_tunnel(const std::string& dev, const std::string& local, const s
     return fd;
 }
 
-Tunnel::Tunnel(const Config &cfg)
+Tunnel *Tunnel::globalTunnelPtr=NULL;
+
+void Tunnel::corpseHandler(int)
+{
+    pid_t pid=waitpid(-1,NULL,WNOHANG);
+    if(globalTunnelPtr!=NULL)
+    {
+        if(pid==globalTunnelPtr->pid)
+        {
+            exit(0);    //TODO: zrobic tu cos madrzejszego
+//            globalTunnelPtr->reset();
+        }
+    }
+}
+
+Tunnel::Tunnel(Config &cfg)
     :cfg(cfg),localIn(STDIN_FILENO),localOut(STDOUT_FILENO),tunnel(-1),buffer(10000),tunBuffer(10000)
 {
+    assert(globalTunnelPtr==NULL);
+    signal(SIGCHLD, corpseHandler);
+    globalTunnelPtr=this;
+    reset();
+}
+
+void Tunnel::reset()
+{
+    if(tunnel>=0)
+    {
+        ::close(tunnel);
+        tunnel=-1;
+    }
+    buffer.reset();
+    tunBuffer.reset();
     if(!cfg.isServer())
     {
         //w argv[1] jest proxy command i w takim razie jestesmy klientem laczacym sie do znanego serwera
-        popen2(cfg.proxyCommand().c_str(), localIn, localOut);
+        pid=popen2(cfg.proxyCommand().c_str(), localIn, localOut);
     }
     CHECK(fcntl(localIn, F_SETFL, O_NONBLOCK));
 }
@@ -100,6 +133,22 @@ void Tunnel::initServer(const char *name, size_t len)
     for(auto& i:cfg.others())
         if(name!=i.first)
             send(MessageType::OTHER, i.second);
+}
+
+void Tunnel::other(const char *proxyCommand, size_t len)
+{
+    if(proxyCommand[len-1]!='\0')
+        return;
+    pid_t pid;
+    CHECK(pid=fork());
+    if(pid==0)
+    {
+        cfg.setProxyCommand(proxyCommand);
+        reset();
+        work();
+        exit(0);
+    }
+    fprintf(stderr, "My child is %d\n", pid);
 }
 
 void Tunnel::deliver(const char *data, size_t len)
@@ -150,7 +199,7 @@ void Tunnel::process(MessageType type, char *data, size_t len)
         initServer(data,len);
         break;
     case MessageType::OTHER:
-        fprintf(stderr,"Other server: '%s'\n", data);
+        other(data,len);
         break;
     default:
         fprintf(stderr,"Ignoring packet of type %d with length %ld\n", type, len);
@@ -192,7 +241,7 @@ void Tunnel::work()
         {
             tunBuffer.read(tunnel);
             send(MessageType::PACKET, tunBuffer.data(), tunBuffer.length());
-            tunBuffer.remove(tunBuffer.length());
+            tunBuffer.reset();
         }
         if(fds[1].revents&POLLIN)	// zdalny pakiet, przetworzyc i wykonac albo dostarczyc
         {

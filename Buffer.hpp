@@ -59,6 +59,10 @@ class Buffer : private boost::noncopyable
             else
                 _pos=0;
         }
+        void reset()
+        {
+            _pos=0;
+        }
     private:
         size_t _size;
         size_t _pos;
