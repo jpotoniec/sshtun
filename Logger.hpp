@@ -10,6 +10,7 @@ public:
     {
         static auto logger=spdlog::stderr_logger_mt("console");
         logger->set_level(spdlog::level::trace);
+        logger->set_pattern("[thread %t] %+");
         return logger;
     }
 private:

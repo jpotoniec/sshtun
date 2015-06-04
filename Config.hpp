@@ -9,7 +9,8 @@
 class Config : boost::noncopyable
 {
 public:
-    Config(const IniFile& f, const std::string& proxyCommand="")
+    static const std::string PROXY_ENV;
+    Config(const IniFile& f)
         :ini(f)
     {
         _name=ini("name");
@@ -19,10 +20,15 @@ public:
             CHECK(gethostname(buf, sizeof(buf)));
             _name=buf;
         }
-        if(proxyCommand.empty())
+        const char *ptr=getenv(PROXY_ENV.c_str());    //TODO: secure_getenv?
+        if(ptr!=NULL)
+        {
+            _proxyCommand=ptr;
+            unsetenv(PROXY_ENV.c_str());
+        }
+        if(_proxyCommand.empty())
             _proxyCommand=ini("server");
-        else
-            _proxyCommand=proxyCommand;
+        Logger::global()->info("Using proxy command '{}'",_proxyCommand);
     }
     std::string name() const
     {
@@ -39,10 +45,6 @@ public:
     std::map<std::string,std::string> others() const
     {
         return ini["others"];
-    }
-    void setProxyCommand(const std::string& proxyCommand)
-    {
-        _proxyCommand=proxyCommand;
     }
     std::string proxyCommand() const
     {

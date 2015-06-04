@@ -84,6 +84,9 @@ void PrivilegedOperations::work()
     {
         CreateTunnelPacket p;
         ssize_t n=recv(sock, &p, sizeof(p), 0);
+        Logger::global()->debug("Privileged worker received {} bytes", n);
+        if(n==0)
+            break;
         assert(n==sizeof(p));
         Logger::global()->info("Setting up tunnel {}: {} -> {}", p.name, p.local, p.remote);
         int fd,helper;
@@ -110,6 +113,7 @@ void PrivilegedOperations::work()
             Logger::global()->error("{}", e.what());
         }
     }
+    exit(0);
 }
 
 void PrivilegedOperations::start()

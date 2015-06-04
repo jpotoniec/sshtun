@@ -2,6 +2,8 @@
 #include "IniFile.hpp"
 #include "PrivilegedOperations.hpp"
 
+const std::string Config::PROXY_ENV="SSHTUN_PROXY_COMMAND";
+
 int main(int argc, char **argv)
 {
     PrivilegedOperations po;
@@ -15,7 +17,7 @@ int main(int argc, char **argv)
     else
         f.load("sshtun.ini");
     Config cfg(f);
-    Tunnel t(cfg, po);
+    Tunnel t(cfg, po, argc, argv);
     t.work();
 	return 0;
 }

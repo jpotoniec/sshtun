@@ -9,7 +9,7 @@ class Tunnel
 {
     public:
         enum struct MessageType : char {PACKET, DHCP, HANDSHAKE, OTHER};
-        Tunnel(Config &cfg, PrivilegedOperations& po);
+        Tunnel(Config &cfg, PrivilegedOperations& po, int argc, char **argv);
         void work();
     private:
         static Tunnel *globalTunnelPtr;
@@ -19,6 +19,7 @@ class Tunnel
         pid_t pid;
         int localIn,localOut,tunnel;
         Buffer buffer,tunBuffer;
+        char **argv;
         static void corpseHandler(int);
         void send(MessageType type, const char *data, uint16_t len);
         void send(MessageType type, const std::string& data)

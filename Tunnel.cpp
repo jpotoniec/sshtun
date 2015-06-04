@@ -52,12 +52,16 @@ void Tunnel::corpseHandler(int)
     }
 }
 
-Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po)
+Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po, int argc, char **argv)
     :cfg(cfg),po(po),reconnect(false),pid(-1),localIn(STDIN_FILENO),localOut(STDOUT_FILENO),tunnel(-1),buffer(10000),tunBuffer(10000)
 {
     assert(globalTunnelPtr==NULL);
     signal(SIGCHLD, corpseHandler);
     globalTunnelPtr=this;
+    this->argv=new char*[argc+1];
+    this->argv[argc]=NULL;
+    for(int i=0;i<argc;++i)
+        this->argv[i]=strdup(argv[i]);
 }
 
 void Tunnel::reset()
@@ -120,12 +124,11 @@ void Tunnel::other(const char *proxyCommand, size_t len)
     CHECK(pid=fork());
     if(pid==0)
     {
-        cfg.setProxyCommand(proxyCommand);
-        reset();
-        work();
-        exit(0);
+        CHECK(setenv(Config::PROXY_ENV.c_str(), proxyCommand, 1));
+        CHECK(execv("/proc/self/exe", argv));
     }
     Logger::global()->debug("My child is {}", pid);
+    sleep(10);
 }
 
 void Tunnel::deliver(const char *data, size_t len)
