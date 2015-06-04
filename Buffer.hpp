@@ -2,6 +2,7 @@
 #define BUFFER_HPP
 
 #include "LibcError.hpp"
+#include "Logger.hpp"
 #include <boost/noncopyable.hpp>
 
 class Buffer : private boost::noncopyable
@@ -18,18 +19,9 @@ class Buffer : private boost::noncopyable
         ssize_t read(int fd)
         {
             ssize_t n=::read(fd, _data+_pos, _size-_pos);
-            fprintf(stderr, "read %ld\n", n);
+            Logger::global()->trace("read {}",n);
             if(n==-1)
                 throw LibcError("read");
-#if 0
-            for(size_t i=0;i<n;++i)
-            {
-                fprintf(stderr,"%02x ", static_cast<uint8_t>(_data[_pos+i]));
-                if(i%16==15)
-                    fprintf(stderr,"\n");
-            }
-            fprintf(stderr,"\n");
-#endif
             _pos+=n;
             return n;
         }

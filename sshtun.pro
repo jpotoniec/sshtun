@@ -3,6 +3,9 @@ CONFIG += console c++11
 CONFIG -= app_bundle
 CONFIG -= qt
 
+INCLUDEPATH += spdlog/include/
+LIBS += -lpthread
+
 SOURCES += \
     sshtun.cpp \
     Tunnel.cpp \
@@ -16,7 +19,8 @@ HEADERS += \
     LibcError.hpp \
     Tunnel.hpp \
     Config.hpp \
-    IniFile.hpp
+    IniFile.hpp \
+    Logger.hpp
 
 OTHER_FILES += \
     sshtun.ini \

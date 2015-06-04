@@ -1,4 +1,5 @@
 #include "Tunnel.hpp"
+#include "Logger.hpp"
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <linux/if_tun.h>
@@ -39,7 +40,7 @@ static pid_t popen2(const char* command, int &in, int &out)
 
 static int init_tunnel(const std::string& dev, const std::string& local, const std::string& remote)
 {
-    fprintf(stderr, "Setting up tunnel %s %s -> %s\n", dev.c_str(), local.c_str(), remote.c_str());
+    Logger::global()->info("Setting up tunnel {} {} -> {}", dev, local, remote);
     int fd,sock;
     CHECK(fd=open("/dev/net/tun",O_RDWR));
     ifreq ifr;
@@ -146,7 +147,7 @@ void Tunnel::other(const char *proxyCommand, size_t len)
         work();
         exit(0);
     }
-    fprintf(stderr, "My child is %d\n", pid);
+    Logger::global()->debug("My child is {}", pid);
 }
 
 void Tunnel::deliver(const char *data, size_t len)
@@ -155,7 +156,7 @@ void Tunnel::deliver(const char *data, size_t len)
     while(len>0)
     {
         n=write(tunnel, data, len);
-        fprintf(stderr, "Delivered %ld/%ld\n", n, len);
+        Logger::global()->trace("Delivered {}/{} bytes", n, len);
         if(n<0)
             throw LibcError("write");
         data+=n;
@@ -165,7 +166,7 @@ void Tunnel::deliver(const char *data, size_t len)
 
 void Tunnel::send(MessageType type, const char *data, uint16_t len)
 {
-    fprintf(stderr,"Sending %d bytes\n", len);
+    Logger::global()->trace("Sending {} bytes", len);
     char buf[3];
     buf[0]=static_cast<char>(type);
     uint16_t x=htons(len);
@@ -176,11 +177,28 @@ void Tunnel::send(MessageType type, const char *data, uint16_t len)
     do
     {
         CHECK(n=write(localOut, data, len));
-        fprintf(stderr,"Sent %ld/%d bytes\n", n, len);
+        Logger::global()->trace("Sent {}/{} bytes", n, len);
         data+=n;
         len-=n;
     }
     while(len>0);
+}
+
+std::ostream& operator<<(std::ostream& o, Tunnel::MessageType t)
+{
+    switch(t)
+    {
+    case Tunnel::MessageType::PACKET:
+        return o<<"PACKET";
+    case Tunnel::MessageType::DHCP:
+        return o<<"DHCP";
+    case Tunnel::MessageType::HANDSHAKE:
+        return o<<"HANDSHAKE";
+    case Tunnel::MessageType::OTHER:
+        return o<<"OTHER";
+    default:
+        return o<<static_cast<uint16_t>(t);
+    }
 }
 
 void Tunnel::process(MessageType type, char *data, size_t len)
@@ -200,7 +218,7 @@ void Tunnel::process(MessageType type, char *data, size_t len)
         other(data,len);
         break;
     default:
-        fprintf(stderr,"Ignoring packet of type %d with length %ld\n", type, len);
+        Logger::global()->warn("Ignoring packet of type {} with length {}", type, len);
         break;
     }
 }
@@ -248,11 +266,11 @@ void Tunnel::work()
             if(fds[1].revents&POLLIN)	// zdalny pakiet, przetworzyc i wykonac albo dostarczyc
             {
                 buffer.read(localIn);
-                fprintf(stderr,"len=%ld=0x%lx\n", buffer.length(), buffer.length());
+                Logger::global()->trace("len={0}=0x{0:x}", buffer.length());
                 while(buffer.length()>=3)
                 {
                     size_t len=ntohs(*reinterpret_cast<const uint16_t*>(buffer.data()+1));
-                    fprintf(stderr, "Packet legnth %ld=0x%lx, buffer length %ld=0x%lx\n", len, len, buffer.length(), buffer.length());
+                    Logger::global()->trace("Packet length {0}=0x{0:x}, buffer length {1}=0x{1:x}", len, buffer.length());
                     size_t whole=len+3;
                     if(buffer.length()>=whole)
                     {

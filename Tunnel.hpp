@@ -7,10 +7,10 @@
 class Tunnel
 {
     public:
+        enum struct MessageType : char {PACKET, DHCP, HANDSHAKE, OTHER};
         Tunnel(Config &cfg);
         void work();
     private:
-        enum struct MessageType : char {PACKET, DHCP, HANDSHAKE, OTHER};
         static Tunnel *globalTunnelPtr;
         bool reconnect;
         pid_t pid;

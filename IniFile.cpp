@@ -1,4 +1,5 @@
 #include "IniFile.hpp"
+#include "Logger.hpp"
 #include <fstream>
 #include <iostream>
 
@@ -26,7 +27,7 @@ void IniFile::load(const std::string& file)
             {
                 std::string key=line.substr(0,i);
                 std::string value=line.substr(i+1);
-                std::cerr<<"'"<<section<<"' '"<<key<<"' '"<<value<<"'\n";
+                Logger::global()->debug("Config: '{}' '{}' '{}'", section, key, value);
                 values[section][key]=value;
             }
         }
