@@ -54,6 +54,10 @@ public:
     {
         return proxyCommand().empty();
     }
+    IniFile::Section clients() const
+    {
+        return ini["clients"];
+    }
 private:
     std::string _name;
     std::string _proxyCommand;

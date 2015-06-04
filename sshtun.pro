@@ -22,7 +22,8 @@ HEADERS += \
     Config.hpp \
     IniFile.hpp \
     Logger.hpp \
-    PrivilegedOperations.hpp
+    PrivilegedOperations.hpp \
+    Utils.hpp
 
 OTHER_FILES += \
     sshtun.ini \

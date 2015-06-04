@@ -1,6 +1,7 @@
 #include "PrivilegedOperations.hpp"
 #include "Logger.hpp"
 #include "LibcError.hpp"
+#include "Utils.hpp"
 #include <sys/socket.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -13,11 +14,20 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 
-struct CreateTunnelPacket
+struct Packet
 {
-    char name[IFNAMSIZ];
-    sockaddr_in local;
-    sockaddr_in remote;
+    enum struct Type {CREATE_TUNNEL, ADD_ROUTE};
+    Type type;
+    union
+    {
+        struct
+        {
+            char name[IFNAMSIZ];
+            char local[32];
+            char remote[32];
+        } tunnel;
+        char route[64];
+    };
 };
 
 static void send_fd(int sock, int fd)
@@ -82,31 +92,43 @@ void PrivilegedOperations::work()
 {
     for(;;)
     {
-        CreateTunnelPacket p;
+        Packet p;
         ssize_t n=recv(sock, &p, sizeof(p), 0);
         Logger::global()->debug("Privileged worker received {} bytes", n);
         if(n==0)
             break;
         assert(n==sizeof(p));
-        Logger::global()->info("Setting up tunnel {}: {} -> {}", p.name, p.local, p.remote);
-        int fd,helper;
         try
         {
-            CHECK(fd=open("/dev/net/tun",O_RDWR));
-            ifreq ifr;
-            memset(&ifr, 0, sizeof(ifr));
-            ifr.ifr_flags = IFF_TUN;
-            strncpy(ifr.ifr_name,p.name,IFNAMSIZ);
-            CHECK(ioctl(fd, TUNSETIFF, &ifr));
-            CHECK(fcntl(fd, F_SETFL, O_NONBLOCK));
-            CHECK(helper=socket(PF_INET, SOCK_DGRAM, IPPROTO_IP));
-            memcpy(&ifr.ifr_addr, &p.local, sizeof(p.local));
-            CHECK(ioctl(helper, SIOCSIFADDR, &ifr));
-            memcpy(&ifr.ifr_addr, &p.remote, sizeof(p.remote));
-            CHECK(ioctl(helper, SIOCSIFDSTADDR, &ifr));
-            close(helper);
-            send_fd(sock, fd);
-            close(fd);
+            if(p.type==Packet::Type::CREATE_TUNNEL)
+            {
+                this->router=p.tunnel.remote;
+                Logger::global()->info("Setting up tunnel {}: {} -> {}", p.tunnel.name, p.tunnel.local, p.tunnel.remote);
+                int fd,helper;
+                CHECK(fd=open("/dev/net/tun",O_RDWR));
+                ifreq ifr;
+                memset(&ifr, 0, sizeof(ifr));
+                ifr.ifr_flags = IFF_TUN;
+                sensibleCopy(ifr.ifr_name,p.tunnel.name,IFNAMSIZ);
+                CHECK(ioctl(fd, TUNSETIFF, &ifr));
+                CHECK(fcntl(fd, F_SETFL, O_NONBLOCK));
+                CHECK(helper=socket(PF_INET, SOCK_DGRAM, IPPROTO_IP));
+                sockaddr_in addr;
+                addr={AF_INET, 0, inet_addr(p.tunnel.local)};
+                memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
+                CHECK(ioctl(helper, SIOCSIFADDR, &ifr));
+                addr={AF_INET, 0, inet_addr(p.tunnel.remote)};
+                memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
+                CHECK(ioctl(helper, SIOCSIFDSTADDR, &ifr));
+                close(helper);
+                sleep(2);   //hack to allow the interface to go up
+                send_fd(sock, fd);
+                close(fd);
+            }
+            if(p.type==Packet::Type::ADD_ROUTE)
+            {
+                processAddRoute(p.route);
+            }
         }
         catch(const std::exception &e)
         {
@@ -114,6 +136,18 @@ void PrivilegedOperations::work()
         }
     }
     exit(0);
+}
+
+void PrivilegedOperations::processAddRoute(const char *route)
+{
+    Logger::global()->info("Adding route {} via {}", route, router);
+    pid_t pid;
+    CHECK(pid=fork());
+    if(pid==0)
+    {
+        CHECK(execlp("ip","ip","r","a",route,"via",router.c_str(), NULL));
+        exit(0);
+    }
 }
 
 void PrivilegedOperations::start()
@@ -138,11 +172,21 @@ void PrivilegedOperations::start()
 
 int PrivilegedOperations::createTunnel(const std::string& name, const std::string& local, const std::string& remote)
 {
-    CreateTunnelPacket p;
+    Packet p;
     memset(&p,0,sizeof(p));
-    strncpy(p.name,name.c_str(),sizeof(p.name)-1);
-    p.local={AF_INET, 0, inet_addr(local.c_str())};
-    p.remote={AF_INET, 0, inet_addr(remote.c_str())};
+    p.type=Packet::Type::CREATE_TUNNEL;
+    sensibleCopy(p.tunnel.name,name.c_str(),sizeof(p.tunnel.name));
+    sensibleCopy(p.tunnel.local, local.c_str(), sizeof(p.tunnel.local));
+    sensibleCopy(p.tunnel.remote, remote.c_str(), sizeof(p.tunnel.remote));
     CHECK(send(sock, &p, sizeof(p), 0));
     return recv_fd(sock);
+}
+
+void PrivilegedOperations::addRoute(const std::string &route)
+{
+    Packet p;
+    memset(&p,0,sizeof(p));
+    p.type=Packet::Type::ADD_ROUTE;
+    sensibleCopy(p.route,route.c_str(),sizeof(p.route));
+    CHECK(send(sock, &p, sizeof(p), 0));
 }

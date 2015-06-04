@@ -114,6 +114,9 @@ void Tunnel::initServer(const char *name, size_t len)
     for(auto& i:cfg.others())
         if(name!=i.first)
             send(MessageType::OTHER, i.second);
+    for(auto& i:cfg.clients())
+        if(name!=i.first)
+            send(MessageType::ROUTE, i.second);
 }
 
 void Tunnel::other(const char *proxyCommand, size_t len)
@@ -129,6 +132,13 @@ void Tunnel::other(const char *proxyCommand, size_t len)
     }
     Logger::global()->debug("My child is {}", pid);
     sleep(10);
+}
+
+void Tunnel::route(const char *data, size_t len)
+{
+    if(data[len-1]!=0)
+        return;
+    po.addRoute(data);
 }
 
 void Tunnel::deliver(const char *data, size_t len)
@@ -177,6 +187,8 @@ std::ostream& operator<<(std::ostream& o, Tunnel::MessageType t)
         return o<<"HANDSHAKE";
     case Tunnel::MessageType::OTHER:
         return o<<"OTHER";
+    case Tunnel::MessageType::ROUTE:
+        return o<<"ROUTE";
     default:
         return o<<static_cast<uint16_t>(t);
     }
@@ -197,6 +209,9 @@ void Tunnel::process(MessageType type, char *data, size_t len)
         break;
     case MessageType::OTHER:
         other(data,len);
+        break;
+    case MessageType::ROUTE:
+        route(data,len);
         break;
     default:
         Logger::global()->warn("Ignoring packet of type {} with length {}", type, len);

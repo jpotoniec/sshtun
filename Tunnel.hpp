@@ -8,7 +8,7 @@
 class Tunnel
 {
     public:
-        enum struct MessageType : char {PACKET, DHCP, HANDSHAKE, OTHER};
+        enum struct MessageType : char {PACKET, DHCP, HANDSHAKE, OTHER, ROUTE};
         Tunnel(Config &cfg, PrivilegedOperations& po, int argc, char **argv);
         void work();
     private:
@@ -32,6 +32,7 @@ class Tunnel
         void initServer(const char *data, size_t len);
         void handshake();
         void other(const char *data, size_t len);
+        void route(const char *data, size_t len);
         void reset();
         void close();
 };
