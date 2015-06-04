@@ -14,6 +14,26 @@
 
 const char SEP='\x01';
 
+static void popen2(const char* command, int &in, int &out)
+{
+    int cmdinput[2],cmdoutput[2];
+    CHECK(pipe(cmdinput));	//blocking
+    CHECK(pipe(cmdoutput));
+    pid_t pid;
+    CHECK(pid=fork());
+    if(pid==0)
+    {
+        CHECK(dup2(cmdoutput[1], STDOUT_FILENO));
+        CHECK(dup2(cmdinput[0], STDIN_FILENO));
+        execl("/bin/sh", "sh", "-c", command, NULL);
+    }
+    else
+    {
+        in=cmdoutput[0];
+        out=cmdinput[1];
+    }
+}
+
 static int init_tunnel(const std::string& dev, const std::string& local, const std::string& remote)
 {
     fprintf(stderr, "Setting up tunnel %s %s -> %s\n", dev.c_str(), local.c_str(), remote.c_str());
@@ -35,6 +55,18 @@ static int init_tunnel(const std::string& dev, const std::string& local, const s
     close(sock);
     return fd;
 }
+
+Tunnel::Tunnel(const Config &cfg)
+    :cfg(cfg),localIn(STDIN_FILENO),localOut(STDOUT_FILENO),tunnel(-1),buffer(10000),tunBuffer(10000)
+{
+    if(!cfg.isServer())
+    {
+        //w argv[1] jest proxy command i w takim razie jestesmy klientem laczacym sie do znanego serwera
+        popen2(cfg.proxyCommand().c_str(), localIn, localOut);
+    }
+    CHECK(fcntl(localIn, F_SETFL, O_NONBLOCK));
+}
+
 
 void Tunnel::init(char *data, size_t len)
 {
@@ -128,7 +160,7 @@ void Tunnel::process(MessageType type, char *data, size_t len)
 
 void Tunnel::handshake()
 {
-    if(!server)
+    if(!cfg.isServer())
     {
         send(MessageType::HANDSHAKE, cfg.name());
     }

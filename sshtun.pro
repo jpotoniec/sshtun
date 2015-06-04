@@ -18,3 +18,7 @@ HEADERS += \
     Config.hpp \
     IniFile.hpp
 
+OTHER_FILES += \
+    sshtun.ini \
+    fruwacz.ini
+

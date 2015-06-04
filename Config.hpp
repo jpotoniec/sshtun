@@ -36,6 +36,14 @@ public:
     {
         return ini["others"];
     }
+    std::string proxyCommand() const
+    {
+        return ini("server");
+    }
+    bool isServer() const
+    {
+        return proxyCommand().empty();
+    }
 private:
     std::string _name;
     IniFile ini;
