@@ -145,7 +145,7 @@ void PrivilegedOperations::processAddRoute(const char *route)
     CHECK(pid=fork());
     if(pid==0)
     {
-        CHECK(execlp("ip","ip","r","a",route,"via",router.c_str(), NULL));
+        CHECK(execlp("ip","ip","r","a",route,"via",router.c_str(),"metric","100", NULL));
         exit(0);
     }
 }
