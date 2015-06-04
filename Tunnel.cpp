@@ -68,19 +68,17 @@ void Tunnel::corpseHandler(int)
     {
         if(pid==globalTunnelPtr->pid)
         {
-            exit(0);    //TODO: zrobic tu cos madrzejszego
-//            globalTunnelPtr->reset();
+            globalTunnelPtr->reconnect=true;
         }
     }
 }
 
 Tunnel::Tunnel(Config &cfg)
-    :cfg(cfg),localIn(STDIN_FILENO),localOut(STDOUT_FILENO),tunnel(-1),buffer(10000),tunBuffer(10000)
+    :reconnect(false),pid(-1),cfg(cfg),localIn(STDIN_FILENO),localOut(STDOUT_FILENO),tunnel(-1),buffer(10000),tunBuffer(10000)
 {
     assert(globalTunnelPtr==NULL);
     signal(SIGCHLD, corpseHandler);
     globalTunnelPtr=this;
-    reset();
 }
 
 void Tunnel::reset()
@@ -217,48 +215,53 @@ void Tunnel::handshake()
 
 void Tunnel::work()
 {
-    handshake();
     for(;;)
     {
-        pollfd fds[]={
-            {tunnel,POLLIN|POLLHUP|POLLERR,0},
-            {localIn,POLLIN,0},
-            {localOut,POLLHUP|POLLERR,0},
-            {-1,0,0}
-        };
-        int n=poll(fds, sizeof(fds)/sizeof(fds[0]), -1);
-        if(n<0)
+        reconnect=false;
+        reset();
+        handshake();
+        while(!reconnect)
         {
-            if(errno==EINTR)
-                continue;
-            else
-                throw LibcError("poll");
-        }
-        for(pollfd *i=fds;i->fd>=0;i++)
-            if(i->revents&(POLLHUP|POLLERR))
-                return;
-        if(fds[0].revents&POLLIN)	// pakiet z lokalnego systemu, opakowac i wyekspediowac
-        {
-            tunBuffer.read(tunnel);
-            send(MessageType::PACKET, tunBuffer.data(), tunBuffer.length());
-            tunBuffer.reset();
-        }
-        if(fds[1].revents&POLLIN)	// zdalny pakiet, przetworzyc i wykonac albo dostarczyc
-        {
-            buffer.read(localIn);
-            fprintf(stderr,"len=%ld=0x%lx\n", buffer.length(), buffer.length());
-            while(buffer.length()>=3)
+            pollfd fds[]={
+                {tunnel,POLLIN|POLLHUP|POLLERR,0},
+                {localIn,POLLIN,0},
+                {localOut,POLLHUP|POLLERR,0},
+                {-1,0,0}
+            };
+            int n=poll(fds, sizeof(fds)/sizeof(fds[0]), -1);
+            if(n<0)
             {
-                size_t len=ntohs(*reinterpret_cast<const uint16_t*>(buffer.data()+1));
-                fprintf(stderr, "Packet legnth %ld=0x%lx, buffer length %ld=0x%lx\n", len, len, buffer.length(), buffer.length());
-                size_t whole=len+3;
-                if(buffer.length()>=whole)
-                {
-                    process(static_cast<MessageType>(buffer.data()[0]), buffer.data()+3, len);
-                    buffer.remove(whole);
-                }
+                if(errno==EINTR)
+                    continue;
                 else
-                    break;
+                    throw LibcError("poll");
+            }
+            for(pollfd *i=fds;i->fd>=0;i++)
+                if(i->revents&(POLLHUP|POLLERR))
+                    return;
+            if(fds[0].revents&POLLIN)	// pakiet z lokalnego systemu, opakowac i wyekspediowac
+            {
+                tunBuffer.read(tunnel);
+                send(MessageType::PACKET, tunBuffer.data(), tunBuffer.length());
+                tunBuffer.reset();
+            }
+            if(fds[1].revents&POLLIN)	// zdalny pakiet, przetworzyc i wykonac albo dostarczyc
+            {
+                buffer.read(localIn);
+                fprintf(stderr,"len=%ld=0x%lx\n", buffer.length(), buffer.length());
+                while(buffer.length()>=3)
+                {
+                    size_t len=ntohs(*reinterpret_cast<const uint16_t*>(buffer.data()+1));
+                    fprintf(stderr, "Packet legnth %ld=0x%lx, buffer length %ld=0x%lx\n", len, len, buffer.length(), buffer.length());
+                    size_t whole=len+3;
+                    if(buffer.length()>=whole)
+                    {
+                        process(static_cast<MessageType>(buffer.data()[0]), buffer.data()+3, len);
+                        buffer.remove(whole);
+                    }
+                    else
+                        break;
+                }
             }
         }
     }

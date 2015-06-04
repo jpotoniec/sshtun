@@ -12,6 +12,7 @@ class Tunnel
     private:
         enum struct MessageType : char {PACKET, DHCP, HANDSHAKE, OTHER};
         static Tunnel *globalTunnelPtr;
+        bool reconnect;
         pid_t pid;
         Config &cfg;
         int localIn,localOut,tunnel;
