@@ -140,21 +140,21 @@ void Tunnel::process(MessageType type, char *data, size_t len)
 {
     switch(type)
     {
-        case MessageType::PACKET:
-            deliver(data, len);
-            break;
-        case MessageType::DHCP:
-            init(data,len);
-            break;
-        case MessageType::HANDSHAKE:
-            initServer(data,len);
-            break;
+    case MessageType::PACKET:
+        deliver(data, len);
+        break;
+    case MessageType::DHCP:
+        init(data,len);
+        break;
+    case MessageType::HANDSHAKE:
+        initServer(data,len);
+        break;
     case MessageType::OTHER:
-            fprintf(stderr,"Other server: '%s'\n", data);
-            break;
-        default:
-            fprintf(stderr,"Ignoring packet of type %d with length %ld\n", type, len);
-            break;
+        fprintf(stderr,"Other server: '%s'\n", data);
+        break;
+    default:
+        fprintf(stderr,"Ignoring packet of type %d with length %ld\n", type, len);
+        break;
     }
 }
 
