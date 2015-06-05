@@ -19,9 +19,8 @@ Logger Logger::me;
  * drugi połączenie otrzymuje i wtedy ma dane w unix sockecie
  */
 
-int mainClient(int argc, char **argv)
+int mainClient()
 {
-    Logger::global()->info("Started client");
     int sock;
     CHECK(sock=socket(AF_UNIX, SOCK_SEQPACKET|SOCK_CLOEXEC, 0));
     sockaddr_un addr;
@@ -56,17 +55,14 @@ int mainClient(int argc, char **argv)
         {
             ssize_t n;
             CHECK(n=read(sock,buf,sizeof(buf)));
-            Logger::global()->trace("server -> ssh: {} bytes", n);
             if(n==0)
                 return 0;
             assert(write(STDOUT_FILENO, buf, n)==n);
         }
-
         if(fds[1].revents&POLLIN)
         {
             ssize_t n;
             CHECK(n=read(STDIN_FILENO,buf,sizeof(buf)));
-            Logger::global()->trace("ssh -> server: {} bytes", n);
             if(n==0)
                 return 0;
             assert(write(sock, buf, n)==n);
@@ -143,6 +139,6 @@ int main(int argc, char **argv)
     }
     else
     {
-        return mainClient(argc, argv);
+        return mainClient();
     }
 }
