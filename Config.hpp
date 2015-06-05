@@ -36,7 +36,12 @@ public:
     }
     std::string ip(const std::string& client) const
     {
-        return ini("clients",client);
+        Lock lock(mutex);
+        auto i=_clients.find(client);
+        if(i!=_clients.end())
+            return i->second;
+        else
+            return "";
     }
     std::map<std::string,std::string> others() const
     {
@@ -81,7 +86,7 @@ public:
 private:
     typedef std::mutex Mutex;
     typedef std::lock_guard<Mutex> Lock;
-    Mutex mutex;
+    mutable Mutex mutex;
     Config()
     {
 
