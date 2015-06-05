@@ -30,7 +30,7 @@ class Tunnel
         void init(char *data, size_t len);
         void initServer(const char *data, size_t len);
         void handshake();
-        void other(const char *data, size_t len);
+        void other(char *data, size_t len);
         void route(const char *data, size_t len);
         void otherClient(char *data, size_t len);
         void close();

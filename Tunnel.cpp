@@ -1,6 +1,7 @@
 #include "Tunnel.hpp"
 #include "Logger.hpp"
 #include "Register.hpp"
+#include "TunnelRegister.hpp"
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <linux/if_tun.h>
@@ -122,7 +123,7 @@ void Tunnel::initServer(const char *name, size_t len)
     tunnel=PrivilegedOperations::get().createTunnel(name, Config::get().ip(), remoteIp);
     for(auto& i:Config::get().others())
         if(name!=i.first)
-            send(MessageType::OTHER, i.second);
+            send(MessageType::OTHER, i.first+SEP+i.second);
     bool router=Config::get().isRouter();
     Config::get().clients([this,&name,router](const std::string& clname, const std::string& ip)->void
     {
@@ -136,12 +137,17 @@ void Tunnel::initServer(const char *name, size_t len)
                           );
 }
 
-void Tunnel::other(const char *proxyCommand, size_t len)
+void Tunnel::other(char *name, size_t len)
 {
-    if(proxyCommand[len-1]!='\0')
+    if(name[len-1]!='\0')
         return;
-    Logger::global()->trace("Tunnel::other({},{})", proxyCommand, len);
-    std::thread(startTunnel, std::string(proxyCommand)).detach();
+    char *proxyCommand=strchr(name, SEP);
+    if(proxyCommand==NULL)
+        return;
+    *proxyCommand='\0';
+    proxyCommand++;
+    Logger::global()->trace("Tunnel::other({},{})", name, proxyCommand);
+    TunnelRegister::startTunnelThread(name, proxyCommand);
 }
 
 void Tunnel::route(const char *data, size_t len)
