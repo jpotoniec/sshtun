@@ -13,6 +13,7 @@
 #include <linux/if_tun.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
+#include <wait.h>
 
 struct Packet
 {
@@ -153,6 +154,7 @@ void PrivilegedOperations::processAddRoute(const char *route)
         CHECK(execlp("ip","ip","r","a",route,"via",router.c_str(),"metric","100", NULL));
         exit(0);
     }
+    waitpid(pid, NULL, 0);
 }
 
 void PrivilegedOperations::start()
