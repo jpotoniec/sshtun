@@ -33,3 +33,13 @@ void IniFile::load(const std::string& file)
         }
     }
 }
+
+void IniFile::dump()
+{
+    for(auto &i:values)
+    {
+        std::cout<<"["<<i.first<<"]\n";
+        for(auto &j:i.second)
+            std::cout<<j.first<<"="<<j.second<<"\n";
+    }
+}

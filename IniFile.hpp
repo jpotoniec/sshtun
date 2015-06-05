@@ -30,6 +30,7 @@ public:
             return i->second;
         return Section();
     }
+    void dump();
 private:
     std::map<std::string,Section> values;
 };
