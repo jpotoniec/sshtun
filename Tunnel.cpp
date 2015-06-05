@@ -103,6 +103,7 @@ void Tunnel::init(char *data, size_t len)
         *ptrs[i]='\0';
         ptrs[i]++;
     }
+    Config::get().setIp(ptrs[1]);
     tunnel=PrivilegedOperations::get().createTunnel(ptrs[0], ptrs[1], ptrs[2]);
 }
 

@@ -24,7 +24,13 @@ public:
     }
     std::string ip() const
     {
-        return ini("ip");
+        Lock lock(mutex);
+        return _ip;
+    }
+    void setIp(const std::string& ip)
+    {
+        Lock lock(mutex);
+        _ip=ip;
     }
     std::string loglevel() const
     {
@@ -94,6 +100,7 @@ private:
     std::string _name;
     std::string _proxyCommand;
     IniFile ini;
+    std::string _ip;
     std::map<std::string,std::string> _clients;
 };
 

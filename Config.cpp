@@ -26,5 +26,6 @@ void Config::load(const IniFile& f)
         Lock lock(mutex);
         auto other=ini["clients"];
         _clients.insert(other.begin(), other.end());
+        _ip=ini("ip");
     }
 }
