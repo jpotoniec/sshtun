@@ -188,9 +188,7 @@ void Tunnel::send(MessageType type, const char *data, uint16_t len)
     Logger::global()->trace("Sending {} bytes", len);
     char ch=static_cast<char>(type);
     uint16_t x=htons(len);
-    sendBuffer.append(&ch, sizeof(ch));
-    sendBuffer.append(&x, sizeof(x));
-    sendBuffer.append(data, len);
+    sendBuffer.append(type!=MessageType::PACKET, ch, x, data, len);
 }
 
 std::ostream& operator<<(std::ostream& o, Tunnel::MessageType t)
