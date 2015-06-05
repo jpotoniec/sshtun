@@ -106,16 +106,14 @@ void dropPrivileges()
 int mainServer(int argc, char **argv)
 {
     Logger::global()->info("Started server");
-    PrivilegedOperations::get().start();
-    dropPrivileges();
-    Logger::global()->debug("Hi, I am unprivileged and my uid is {}", getuid());
     IniFile f;
     if(argc>2)
         f.load(argv[2]);
-    else
-        f.load("sshtun.ini");
     Config::get().load(f);
     Logger::configure();
+    PrivilegedOperations::get().start();
+    dropPrivileges();
+    Logger::global()->debug("Hi, I am unprivileged and my uid is {}", getuid());
     if(!Config::get().proxyCommand().empty())
         std::thread(Tunnel::startTunnel, Config::get().proxyCommand()).detach();
     int sock;
