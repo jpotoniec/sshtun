@@ -10,7 +10,6 @@
 class Config : boost::noncopyable
 {
 public:
-    static const std::string PROXY_ENV;
     static Config& get()
     {
         static Config me;
