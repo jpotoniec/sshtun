@@ -39,20 +39,6 @@ static pid_t popen2(const char* command, int &in, int &out)
     return pid;
 }
 
-//Tunnel *Tunnel::globalTunnelPtr=NULL;
-
-//void Tunnel::corpseHandler(int)
-//{
-//    pid_t pid=waitpid(-1,NULL,WNOHANG);
-//    if(globalTunnelPtr!=NULL)
-//    {
-//        if(pid==globalTunnelPtr->pid)
-//        {
-//            globalTunnelPtr->reconnect=true;
-//        }
-//    }
-//}
-
 Tunnel::Tunnel(int client)
     :Tunnel()
 {
