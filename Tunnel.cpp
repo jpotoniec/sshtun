@@ -1,5 +1,6 @@
 #include "Tunnel.hpp"
 #include "Logger.hpp"
+#include "Register.hpp"
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <linux/if_tun.h>
@@ -63,6 +64,7 @@ Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po, const std::string& proxy)
     :Tunnel(cfg, po)
 {
     pid=popen2(proxy.c_str(), localIn, localOut);
+    Register::get().add(pid, localIn);
 }
 
 Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po)
@@ -247,7 +249,7 @@ void Tunnel::work()
         };
         int nfds=sizeof(fds)/sizeof(fds[0]);
         int n=poll(fds, nfds, -1);
-        Logger::global()->trace("poll={} [{} {} {}]", n, fds[0].revents, fds[1].revents, fds[2].revents);
+        Logger::global()->trace("poll={} [{:x} {:x} {:x}]", n, fds[0].revents, fds[1].revents, fds[2].revents);
         if(n<0)
         {
             if(errno==EINTR)
@@ -256,8 +258,8 @@ void Tunnel::work()
                 throw LibcError("poll");
         }
         for(int i=0;i<nfds;++i)
-            if(fds[i].revents&(POLLHUP|POLLERR|POLLRDHUP))
-                break;
+            if(fds[i].revents&(POLLHUP|POLLERR|POLLRDHUP|POLLNVAL))
+                goto quit;
         if(fds[0].revents&POLLIN)	// pakiet z lokalnego systemu, opakowac i wyekspediowac
         {
             if(tunBuffer.read(tunnel)==0)
@@ -285,20 +287,10 @@ void Tunnel::work()
             }
         }
     }
+    quit:
     Logger::global()->info("Client departed, closing tunnel");
     Logger::global()->trace("tunnel fd={}", tunnel);
     CHECK(::close(tunnel));
     ::close(localIn);
     ::close(localOut);
-    if(pid>0)
-    {
-        pid_t r;
-        CHECK(r=waitpid(pid, NULL, WNOHANG));
-        Logger::global()->info("waitpid({})={}", pid, r);
-        if(r==0)
-        {
-            kill(pid, SIGTERM);
-            CHECK(waitpid(pid, NULL, 0));
-        }
-    }
 }

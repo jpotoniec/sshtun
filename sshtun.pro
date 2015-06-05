@@ -11,7 +11,8 @@ SOURCES += \
     Tunnel.cpp \
     IniFile.cpp \
     PrivilegedOperations.cpp \
-    Config.cpp
+    Config.cpp \
+    Register.cpp
 
 include(deployment.pri)
 qtcAddDeployment()
@@ -24,7 +25,8 @@ HEADERS += \
     IniFile.hpp \
     Logger.hpp \
     PrivilegedOperations.hpp \
-    Utils.hpp
+    Utils.hpp \
+    Register.hpp
 
 OTHER_FILES += \
     sshtun.ini \
