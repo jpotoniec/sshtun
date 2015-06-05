@@ -122,7 +122,7 @@ void PrivilegedOperations::processCreateTunnel(const char *name, const char *loc
     this->router=remote;
     Logger::global()->info("Setting up tunnel {}: {} -> {}", name, local, remote);
     int fd,helper;
-    CHECK(fd=open("/dev/net/tun",O_RDWR));
+    CHECK(fd=open("/dev/net/tun",O_RDWR|O_CLOEXEC));
     ifreq ifr;
     memset(&ifr, 0, sizeof(ifr));
     ifr.ifr_flags = IFF_TUN;

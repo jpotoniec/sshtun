@@ -38,30 +38,36 @@ static pid_t popen2(const char* command, int &in, int &out)
     return pid;
 }
 
-Tunnel *Tunnel::globalTunnelPtr=NULL;
+//Tunnel *Tunnel::globalTunnelPtr=NULL;
 
-void Tunnel::corpseHandler(int)
+//void Tunnel::corpseHandler(int)
+//{
+//    pid_t pid=waitpid(-1,NULL,WNOHANG);
+//    if(globalTunnelPtr!=NULL)
+//    {
+//        if(pid==globalTunnelPtr->pid)
+//        {
+//            globalTunnelPtr->reconnect=true;
+//        }
+//    }
+//}
+
+Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po, int client)
+    :Tunnel(cfg, po)
 {
-    pid_t pid=waitpid(-1,NULL,WNOHANG);
-    if(globalTunnelPtr!=NULL)
-    {
-        if(pid==globalTunnelPtr->pid)
-        {
-            globalTunnelPtr->reconnect=true;
-        }
-    }
+    localIn=client;
+    localOut=client;
 }
 
-Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po, int argc, char **argv)
-    :cfg(cfg),po(po),reconnect(false),pid(-1),localIn(STDIN_FILENO),localOut(STDOUT_FILENO),tunnel(-1),buffer(10000),tunBuffer(10000)
+Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po, const std::string& proxy)
+    :Tunnel(cfg, po)
 {
-    assert(globalTunnelPtr==NULL);
-    signal(SIGCHLD, corpseHandler);
-    globalTunnelPtr=this;
-    this->argv=new char*[argc+1];
-    this->argv[argc]=NULL;
-    for(int i=0;i<argc;++i)
-        this->argv[i]=strdup(argv[i]);
+    pid=popen2(proxy.c_str(), localIn, localOut);
+}
+
+Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po)
+    :cfg(cfg),po(po),reconnect(false),pid(-1),localIn(-1),localOut(-1),tunnel(-1),buffer(10000),tunBuffer(10000)
+{
 }
 
 void Tunnel::reset()
@@ -229,54 +235,70 @@ void Tunnel::handshake()
 
 void Tunnel::work()
 {
+//    reset();
+    handshake();
     for(;;)
     {
-        reconnect=false;
-        reset();
-        handshake();
-        while(!reconnect)
+        pollfd fds[]={
+            {tunnel,POLLIN|POLLHUP|POLLERR,0},
+            {localIn,POLLIN|POLLHUP|POLLERR|POLLRDHUP,0},
+            {localOut,POLLHUP|POLLERR,0},
+            {-1,0,0}
+        };
+        int nfds=sizeof(fds)/sizeof(fds[0]);
+        int n=poll(fds, nfds, -1);
+        Logger::global()->trace("poll={} [{} {} {}]", n, fds[0].revents, fds[1].revents, fds[2].revents);
+        if(n<0)
         {
-            pollfd fds[]={
-                {tunnel,POLLIN|POLLHUP|POLLERR,0},
-                {localIn,POLLIN,0},
-                {localOut,POLLHUP|POLLERR,0},
-                {-1,0,0}
-            };
-            int n=poll(fds, sizeof(fds)/sizeof(fds[0]), -1);
-            if(n<0)
+            if(errno==EINTR)
+                continue;
+            else
+                throw LibcError("poll");
+        }
+        for(int i=0;i<nfds;++i)
+            if(fds[i].revents&(POLLHUP|POLLERR|POLLRDHUP))
+                break;
+        if(fds[0].revents&POLLIN)	// pakiet z lokalnego systemu, opakowac i wyekspediowac
+        {
+            if(tunBuffer.read(tunnel)==0)
+                break;
+            send(MessageType::PACKET, tunBuffer.data(), tunBuffer.length());
+            tunBuffer.reset();
+        }
+        if(fds[1].revents&POLLIN)	// zdalny pakiet, przetworzyc i wykonac albo dostarczyc
+        {
+            if(buffer.read(localIn)==0)
+                break;
+            Logger::global()->trace("len={0}=0x{0:x}", buffer.length());
+            while(buffer.length()>=3)
             {
-                if(errno==EINTR)
-                    continue;
-                else
-                    throw LibcError("poll");
-            }
-            for(pollfd *i=fds;i->fd>=0;i++)
-                if(i->revents&(POLLHUP|POLLERR))
-                    return;
-            if(fds[0].revents&POLLIN)	// pakiet z lokalnego systemu, opakowac i wyekspediowac
-            {
-                tunBuffer.read(tunnel);
-                send(MessageType::PACKET, tunBuffer.data(), tunBuffer.length());
-                tunBuffer.reset();
-            }
-            if(fds[1].revents&POLLIN)	// zdalny pakiet, przetworzyc i wykonac albo dostarczyc
-            {
-                buffer.read(localIn);
-                Logger::global()->trace("len={0}=0x{0:x}", buffer.length());
-                while(buffer.length()>=3)
+                size_t len=ntohs(*reinterpret_cast<const uint16_t*>(buffer.data()+1));
+                Logger::global()->trace("Packet length {0}=0x{0:x}, buffer length {1}=0x{1:x}", len, buffer.length());
+                size_t whole=len+3;
+                if(buffer.length()>=whole)
                 {
-                    size_t len=ntohs(*reinterpret_cast<const uint16_t*>(buffer.data()+1));
-                    Logger::global()->trace("Packet length {0}=0x{0:x}, buffer length {1}=0x{1:x}", len, buffer.length());
-                    size_t whole=len+3;
-                    if(buffer.length()>=whole)
-                    {
-                        process(static_cast<MessageType>(buffer.data()[0]), buffer.data()+3, len);
-                        buffer.remove(whole);
-                    }
-                    else
-                        break;
+                    process(static_cast<MessageType>(buffer.data()[0]), buffer.data()+3, len);
+                    buffer.remove(whole);
                 }
+                else
+                    break;
             }
+        }
+    }
+    Logger::global()->info("Client departed, closing tunnel");
+    Logger::global()->trace("tunnel fd={}", tunnel);
+    CHECK(::close(tunnel));
+    ::close(localIn);
+    ::close(localOut);
+    if(pid>0)
+    {
+        pid_t r;
+        CHECK(r=waitpid(pid, NULL, WNOHANG));
+        Logger::global()->info("waitpid({})={}", pid, r);
+        if(r==0)
+        {
+            kill(pid, SIGTERM);
+            CHECK(waitpid(pid, NULL, 0));
         }
     }
 }
