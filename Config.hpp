@@ -39,10 +39,6 @@ public:
     {
         return _proxyCommand;
     }
-    bool isServer() const
-    {
-        return proxyCommand().empty();
-    }
     IniFile::Section clients() const
     {
         return ini["clients"];

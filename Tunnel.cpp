@@ -56,6 +56,7 @@ static pid_t popen2(const char* command, int &in, int &out)
 Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po, int client)
     :Tunnel(cfg, po)
 {
+    server=false;
     localIn=client;
     localOut=client;
 }
@@ -63,32 +64,15 @@ Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po, int client)
 Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po, const std::string& proxy)
     :Tunnel(cfg, po)
 {
+    server=true;
     pid=popen2(proxy.c_str(), localIn, localOut);
     Register::get().add(pid, localIn);
 }
 
 Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po)
-    :cfg(cfg),po(po),reconnect(false),pid(-1),localIn(-1),localOut(-1),tunnel(-1),buffer(10000),tunBuffer(10000)
+    :cfg(cfg),po(po),pid(-1),localIn(-1),localOut(-1),tunnel(-1),buffer(10000),tunBuffer(10000)
 {
 }
-
-void Tunnel::reset()
-{
-    if(tunnel>=0)
-    {
-        ::close(tunnel);
-        tunnel=-1;
-    }
-    buffer.reset();
-    tunBuffer.reset();
-    if(!cfg.isServer())
-    {
-        //w argv[1] jest proxy command i w takim razie jestesmy klientem laczacym sie do znanego serwera
-        pid=popen2(cfg.proxyCommand().c_str(), localIn, localOut);
-    }
-    CHECK(fcntl(localIn, F_SETFL, O_NONBLOCK));
-}
-
 
 void Tunnel::init(char *data, size_t len)
 {
@@ -229,7 +213,7 @@ void Tunnel::process(MessageType type, char *data, size_t len)
 
 void Tunnel::handshake()
 {
-    if(!cfg.isServer())
+    if(server)
     {
         send(MessageType::HANDSHAKE, cfg.name());
     }
@@ -237,7 +221,6 @@ void Tunnel::handshake()
 
 void Tunnel::work()
 {
-//    reset();
     handshake();
     for(;;)
     {

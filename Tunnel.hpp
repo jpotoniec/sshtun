@@ -16,12 +16,10 @@ class Tunnel
         static Tunnel *globalTunnelPtr;
         Config &cfg;
         PrivilegedOperations& po;
-        bool reconnect;
         pid_t pid;
         int localIn,localOut,tunnel;
         Buffer buffer,tunBuffer;
-        char **argv;
-        static void corpseHandler(int);
+        bool server;
         Tunnel(Config &cfg, PrivilegedOperations& po);
         void send(MessageType type, const char *data, uint16_t len);
         void send(MessageType type, const std::string& data)
