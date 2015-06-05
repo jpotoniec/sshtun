@@ -10,7 +10,8 @@ SOURCES += \
     sshtun.cpp \
     Tunnel.cpp \
     IniFile.cpp \
-    PrivilegedOperations.cpp
+    PrivilegedOperations.cpp \
+    Config.cpp
 
 include(deployment.pri)
 qtcAddDeployment()
