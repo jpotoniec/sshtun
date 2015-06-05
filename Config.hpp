@@ -74,14 +74,7 @@ public:
     }
     bool isRouter() const
     {
-        try
-        {
-            return std::stoi(ini("router"));
-        }
-        catch(const std::exception&)
-        {
-            return false;
-        }
+        return toInt(ini("router"),0);
     }
     std::string unprivilegedUser() const
     {
@@ -100,6 +93,17 @@ private:
     IniFile ini;
     std::string _ip;
     std::map<std::string,std::string> _clients;
+    int toInt(const std::string& value, int def) const
+    {
+        try
+        {
+            return std::stoi(value);
+        }
+        catch(const std::exception&)
+        {
+            return def;
+        }
+    }
 };
 
 #endif // CONFIG_HPP
