@@ -16,7 +16,7 @@ class Tunnel
     private:
         pid_t pid;
         int localIn,localOut,tunnel;
-        Buffer buffer,tunBuffer;
+        Buffer buffer,tunBuffer,sendBuffer;
         bool server;
         Tunnel(const std::string& proxy);
         Tunnel();

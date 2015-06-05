@@ -55,6 +55,18 @@ class Buffer : private boost::noncopyable
         {
             _pos=0;
         }
+        void append(const void *param, size_t n)
+        {
+            const char *data=static_cast<const char*>(param);
+            if(_size-_pos<n)
+                throw std::runtime_error("Not enough space in the buffer");
+            memcpy(_data+_pos, data, n);
+            _pos+=n;
+        }
+        bool isEmpty()
+        {
+            return _pos==0;
+        }
     private:
         size_t _size;
         size_t _pos;

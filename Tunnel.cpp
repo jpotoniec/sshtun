@@ -57,7 +57,7 @@ Tunnel::Tunnel(const std::string& proxy)
 }
 
 Tunnel::Tunnel()
-    :pid(-1),localIn(-1),localOut(-1),tunnel(-1),buffer(10000),tunBuffer(10000)
+    :pid(-1),localIn(-1),localOut(-1),tunnel(-1),buffer(10000),tunBuffer(10000),sendBuffer(140000)
 {
 }
 
@@ -186,21 +186,11 @@ void Tunnel::otherClient(char *name, size_t len)
 void Tunnel::send(MessageType type, const char *data, uint16_t len)
 {
     Logger::global()->trace("Sending {} bytes", len);
-    char buf[3];
-    buf[0]=static_cast<char>(type);
+    char ch=static_cast<char>(type);
     uint16_t x=htons(len);
-    memcpy(buf+1, &x, sizeof(x));
-    ssize_t n=write(localOut, buf, 3);
-    if(n!=3)
-        throw LibcError("write1");
-    do
-    {
-        CHECK(n=write(localOut, data, len));
-        Logger::global()->trace("Sent {}/{} bytes", n, len);
-        data+=n;
-        len-=n;
-    }
-    while(len>0);
+    sendBuffer.append(&ch, sizeof(ch));
+    sendBuffer.append(&x, sizeof(x));
+    sendBuffer.append(data, len);
 }
 
 std::ostream& operator<<(std::ostream& o, Tunnel::MessageType t)
@@ -265,10 +255,11 @@ void Tunnel::work()
     handshake();
     for(;;)
     {
+        short outFlag=(!sendBuffer.isEmpty()?POLLOUT:0)|POLLHUP|POLLERR;
         pollfd fds[]={
             {tunnel,POLLIN|POLLHUP|POLLERR,0},
             {localIn,POLLIN|POLLHUP|POLLERR|POLLRDHUP,0},
-            {localOut,POLLHUP|POLLERR,0},
+            {localOut,outFlag,0},
             {-1,0,0}
         };
         int nfds=sizeof(fds)/sizeof(fds[0]);
@@ -309,6 +300,13 @@ void Tunnel::work()
                 else
                     break;
             }
+        }
+        if(fds[2].revents&POLLOUT)
+        {
+            ssize_t n;
+            CHECK(n=write(localOut, sendBuffer.data(), sendBuffer.length()));
+            Logger::global()->trace("Sending {}/{} bytes from buffer", n, sendBuffer.length());
+            sendBuffer.remove(n);
         }
     }
     quit:
