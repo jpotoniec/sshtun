@@ -10,6 +10,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+const char SOCKET_PATH[]="/tmp/sshtun.sock";
+
 Logger Logger::me;
 
 
@@ -26,7 +28,7 @@ int mainClient()
     sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family=AF_UNIX;
-    sensibleCopy(addr.sun_path,"sshtun.sock",sizeof(addr.sun_path));
+    sensibleCopy(addr.sun_path,SOCKET_PATH,sizeof(addr.sun_path));
     CHECK(connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
     CHECK(fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK));
     CHECK(fcntl(sock, F_SETFL, O_NONBLOCK));
@@ -121,7 +123,7 @@ int mainServer(int argc, char **argv)
     sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family=AF_UNIX;
-    sensibleCopy(addr.sun_path,"sshtun.sock",sizeof(addr.sun_path));
+    sensibleCopy(addr.sun_path,SOCKET_PATH,sizeof(addr.sun_path));
     unlink(addr.sun_path);
     CHECK(bind(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
     CHECK(listen(sock, 10));
