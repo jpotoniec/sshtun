@@ -122,6 +122,7 @@ int mainServer(int argc, char **argv)
     memset(&addr, 0, sizeof(addr));
     addr.sun_family=AF_UNIX;
     sensibleCopy(addr.sun_path,"sshtun.sock",sizeof(addr.sun_path));
+    unlink(addr.sun_path);
     CHECK(bind(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
     CHECK(listen(sock, 10));
     for(;;)
