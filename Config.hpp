@@ -63,6 +63,17 @@ public:
     {
         return 5;   //seconds
     }
+    bool isRouter() const
+    {
+        try
+        {
+            return std::stoi(ini("router"));
+        }
+        catch(const std::exception&)
+        {
+            return false;
+        }
+    }
 private:
     typedef std::mutex Mutex;
     typedef std::lock_guard<Mutex> Lock;

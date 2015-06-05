@@ -92,12 +92,14 @@ void Tunnel::initServer(const char *name, size_t len)
     for(auto& i:Config::get().others())
         if(name!=i.first)
             send(MessageType::OTHER, i.second);
-    Config::get().clients([this,&name](const std::string& clname, const std::string& ip)->void
+    bool router=Config::get().isRouter();
+    Config::get().clients([this,&name,router](const std::string& clname, const std::string& ip)->void
     {
         if(name!=clname)
         {
             send(MessageType::OTHER_CLIENT, clname+SEP+ip);
-            send(MessageType::ROUTE, ip);
+            if(router)
+                send(MessageType::ROUTE, ip);
         }
     }
                           );
