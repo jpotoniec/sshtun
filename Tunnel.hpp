@@ -10,6 +10,7 @@ class Tunnel
     public:
         enum struct MessageType : char {PACKET, DHCP, HANDSHAKE, OTHER, ROUTE, OTHER_CLIENT};
         Tunnel(int client);
+        ~Tunnel();
         void work();
         static void startTunnel(const std::string& proxy);
     private:

@@ -60,6 +60,36 @@ Tunnel::Tunnel()
 {
 }
 
+Tunnel::~Tunnel()
+{
+    close();
+}
+
+void Tunnel::close()
+{
+    if(pid>0)
+    {
+        kill(pid, SIGTERM);
+        pid=-1;
+    }
+    if(tunnel>=0)
+    {
+        Logger::global()->trace("tunnel fd={}", tunnel);
+        CHECK(::close(tunnel));
+        tunnel=-1;
+    }
+    if(localIn>=0)
+    {
+        ::close(localIn);
+        localIn=-1;
+    }
+    if(localOut>=0)
+    {
+        ::close(localOut);
+        localOut=-1;
+    }
+}
+
 void Tunnel::init(char *data, size_t len)
 {
     data[len-1]=0;
@@ -276,10 +306,7 @@ void Tunnel::work()
     }
     quit:
     Logger::global()->info("Client departed, closing tunnel");
-    Logger::global()->trace("tunnel fd={}", tunnel);
-    CHECK(::close(tunnel));
-    ::close(localIn);
-    ::close(localOut);
+    close();
 }
 
 void Tunnel::startTunnel(const std::string &proxy)
