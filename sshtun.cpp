@@ -79,7 +79,14 @@ void processClient(int sock)
     Logger::global()->info("New client happened");
     Logger::global()->trace("socket is {}", sock);
     Tunnel t(sock);
-    t.work();
+    try
+    {
+        t.work();
+    }
+    catch(const std::exception& ex)
+    {
+        Logger::global()->error("Remote tunnel died: {}", ex.what());
+    }
     close(sock);
 }
 

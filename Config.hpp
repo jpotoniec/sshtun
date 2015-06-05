@@ -2,9 +2,11 @@
 #define CONFIG_HPP
 
 #include "IniFile.hpp"
+#include "Logger.hpp"
 #include "LibcError.hpp"
 #include <unistd.h>
 #include <boost/noncopyable.hpp>
+#include <mutex>
 
 class Config : boost::noncopyable
 {
@@ -44,15 +46,27 @@ public:
     {
         return _proxyCommand;
     }
-    IniFile::Section clients() const
+    template<typename Fn>
+    void clients(Fn f)
     {
-        return ini["clients"];
+        Lock lock(mutex);
+        for(auto &i:_clients)
+            f(i.first, i.second);
+    }
+    void addClient(const std::string& name, const std::string& ip)
+    {
+        Logger::global()->trace("Discovered new client: {} {}", name, ip);
+        Lock lock(mutex);
+        _clients[name]=ip;
     }
     int breakLength() const
     {
         return 5;   //seconds
     }
 private:
+    typedef std::mutex Mutex;
+    typedef std::lock_guard<Mutex> Lock;
+    Mutex mutex;
     Config()
     {
 
@@ -60,6 +74,7 @@ private:
     std::string _name;
     std::string _proxyCommand;
     IniFile ini;
+    std::map<std::string,std::string> _clients;
 };
 
 #endif // CONFIG_HPP

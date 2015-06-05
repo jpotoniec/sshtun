@@ -8,7 +8,7 @@
 class Tunnel
 {
     public:
-        enum struct MessageType : char {PACKET, DHCP, HANDSHAKE, OTHER, ROUTE};
+        enum struct MessageType : char {PACKET, DHCP, HANDSHAKE, OTHER, ROUTE, OTHER_CLIENT};
         Tunnel(int client);
         void work();
         static void startTunnel(const std::string& proxy);
@@ -31,6 +31,7 @@ class Tunnel
         void handshake();
         void other(const char *data, size_t len);
         void route(const char *data, size_t len);
+        void otherClient(char *data, size_t len);
         void close();
 };
 

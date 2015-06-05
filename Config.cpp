@@ -22,4 +22,9 @@ void Config::load(const IniFile& f)
     if(_proxyCommand.empty())
         _proxyCommand=ini("server");
     Logger::global()->trace("Using proxy command '{}'",_proxyCommand);
+    {
+        Lock lock(mutex);
+        auto other=ini["clients"];
+        _clients.insert(other.begin(), other.end());
+    }
 }

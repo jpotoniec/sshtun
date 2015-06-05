@@ -92,9 +92,15 @@ void Tunnel::initServer(const char *name, size_t len)
     for(auto& i:Config::get().others())
         if(name!=i.first)
             send(MessageType::OTHER, i.second);
-    for(auto& i:Config::get().clients())
-        if(name!=i.first)
-            send(MessageType::ROUTE, i.second);
+    Config::get().clients([this,&name](const std::string& clname, const std::string& ip)->void
+    {
+        if(name!=clname)
+        {
+            send(MessageType::OTHER_CLIENT, clname+SEP+ip);
+            send(MessageType::ROUTE, ip);
+        }
+    }
+                          );
 }
 
 void Tunnel::other(const char *proxyCommand, size_t len)
@@ -124,6 +130,18 @@ void Tunnel::deliver(const char *data, size_t len)
         data+=n;
         len-=n;
     }
+}
+
+void Tunnel::otherClient(char *name, size_t len)
+{
+    if(name[len-1]!='\0')
+        return;
+    char *ip=strchr(name, SEP);
+    if(ip==NULL)
+        return;
+    *ip='\0';
+    ip++;
+    Config::get().addClient(name, ip);
 }
 
 void Tunnel::send(MessageType type, const char *data, uint16_t len)
@@ -160,6 +178,8 @@ std::ostream& operator<<(std::ostream& o, Tunnel::MessageType t)
         return o<<"OTHER";
     case Tunnel::MessageType::ROUTE:
         return o<<"ROUTE";
+    case Tunnel::MessageType::OTHER_CLIENT:
+        return o<<"OTHER_CLIENT";
     default:
         return o<<static_cast<uint16_t>(t);
     }
@@ -183,6 +203,9 @@ void Tunnel::process(MessageType type, char *data, size_t len)
         break;
     case MessageType::ROUTE:
         route(data,len);
+        break;
+    case MessageType::OTHER_CLIENT:
+        otherClient(data, len);
         break;
     default:
         Logger::global()->warn("Ignoring packet of type {} with length {}", type, len);
@@ -263,7 +286,14 @@ void Tunnel::startTunnel(const std::string &proxy)
     {
         Logger::global()->info("Starting tunnel with {}", proxy);
         Tunnel t(proxy);
-        t.work();
+        try
+        {
+            t.work();
+        }
+        catch(const std::exception& ex)
+        {
+            Logger::global()->error("Tunnel died: {}", ex.what());
+        }
         Logger::global()->info("Tunnel closed, waiting {} before reconnecting", Config::get().breakLength());
         sleep(Config::get().breakLength());
     }
