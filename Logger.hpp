@@ -1,6 +1,7 @@
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
 
+#include "Config.hpp"
 #include <spdlog/spdlog.h>
 #include <boost/noncopyable.hpp>
 #include <fstream>
@@ -14,11 +15,11 @@ public:
     }
     static void configure()
     {
-#if 0
-        std::string ll=cfg.loglevel();
+        std::string ll=Config::get().loglevel();
         for(auto i=0;i<=static_cast<int>(spdlog::level::off);++i)
             if(ll==spdlog::level::level_names[i])
                 global()->set_level(static_cast<spdlog::level::level_enum>(i));
+#if 0
         std::string file=cfg.logfile();
         if(!file.empty())
         {
@@ -32,7 +33,7 @@ private:
     Logger()
     {
         logger=spdlog::stderr_logger_mt("console");
-        logger->set_level(spdlog::level::trace);
+        logger->set_level(spdlog::level::info);
         logger->set_pattern("[thread %t] %+");
     }
 };

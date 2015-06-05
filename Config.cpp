@@ -29,3 +29,10 @@ void Config::load(const IniFile& f)
         _ip=ini("ip");
     }
 }
+
+void Config::addClient(const std::string& name, const std::string& ip)
+{
+    Logger::global()->trace("Discovered new client: {} {}", name, ip);
+    Lock lock(mutex);
+    _clients[name]=ip;
+}

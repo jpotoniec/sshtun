@@ -2,7 +2,6 @@
 #define CONFIG_HPP
 
 #include "IniFile.hpp"
-#include "Logger.hpp"
 #include "LibcError.hpp"
 #include <unistd.h>
 #include <boost/noncopyable.hpp>
@@ -34,7 +33,11 @@ public:
     }
     std::string loglevel() const
     {
-        return ini("loglevel");
+        std::string s=ini("loglevel");
+        if(!s.empty())
+            return s;
+        else
+            return "info";
     }
     std::string logfile() const
     {
@@ -64,12 +67,7 @@ public:
         for(auto &i:_clients)
             f(i.first, i.second);
     }
-    void addClient(const std::string& name, const std::string& ip)
-    {
-        Logger::global()->trace("Discovered new client: {} {}", name, ip);
-        Lock lock(mutex);
-        _clients[name]=ip;
-    }
+    void addClient(const std::string& name, const std::string& ip);
     int breakLength() const
     {
         return 5;   //seconds
