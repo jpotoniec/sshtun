@@ -90,12 +90,24 @@ void processClient(int sock)
     close(sock);
 }
 
+
+#include <pwd.h>
+void dropPrivileges()
+{
+    passwd *p=getpwnam(Config::get().unprivilegedUser().c_str());
+    if(p==NULL)
+        throw LibcError("getpwnam");
+    uid_t uid=p->pw_uid;
+    gid_t gid=p->pw_gid;
+    CHECK(setresgid(uid, uid, uid));
+    CHECK(setresuid(gid, gid, gid));
+}
+
 int mainServer(int argc, char **argv)
 {
     Logger::global()->info("Started server");
     PrivilegedOperations::get().start();
-    CHECK(setresgid(1000, 1000, 1000));
-    CHECK(setresuid(1000, 1000, 1000));
+    dropPrivileges();
     Logger::global()->debug("Hi, I am unprivileged and my uid is {}", getuid());
     IniFile f;
     if(argc>2)

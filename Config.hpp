@@ -74,6 +74,10 @@ public:
             return false;
         }
     }
+    std::string unprivilegedUser() const
+    {
+        return "smaug";
+    }
 private:
     typedef std::mutex Mutex;
     typedef std::lock_guard<Mutex> Lock;
