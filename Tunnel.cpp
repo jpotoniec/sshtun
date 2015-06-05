@@ -272,18 +272,19 @@ void Tunnel::work()
         }
         for(int i=0;i<nfds;++i)
             if(fds[i].revents&(POLLHUP|POLLERR|POLLRDHUP|POLLNVAL))
+            {
+                Logger::global()->debug("I quit, fds[{}].revents={:x}", i, fds[i].revents);
                 goto quit;
+            }
         if(fds[0].revents&POLLIN)	// pakiet z lokalnego systemu, opakowac i wyekspediowac
         {
-            if(tunBuffer.read(tunnel)==0)
-                break;
+            tunBuffer.read(tunnel);
             send(MessageType::PACKET, tunBuffer.data(), tunBuffer.length());
             tunBuffer.reset();
         }
         if(fds[1].revents&POLLIN)	// zdalny pakiet, przetworzyc i wykonac albo dostarczyc
         {
-            if(buffer.read(localIn)==0)
-                break;
+            buffer.read(localIn);
             Logger::global()->trace("len={0}=0x{0:x}", buffer.length());
             while(buffer.length()>=3)
             {
