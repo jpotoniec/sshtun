@@ -27,8 +27,9 @@ class Buffer : private boost::noncopyable
         }
         ssize_t write(int fd)
         {
+            const size_t max=63000;
             ssize_t n;
-            CHECK(n=::write(fd, _data, _pos));
+            CHECK(n=::write(fd, _data, std::min(_pos,max)));
             Logger::global()->trace("Sending {}/{} bytes from buffer", n, _pos);
             remove(n);
             return n;
