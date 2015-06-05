@@ -30,14 +30,16 @@ int mainClient()
     CHECK(connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
     CHECK(fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK));
     CHECK(fcntl(sock, F_SETFL, O_NONBLOCK));
+    Buffer buf01(70000),buf10(70000);
     for(;;)
     {
-        char buf[70000];
+        short stdoutFlags=(!buf01.isEmpty()?POLLOUT:0)|POLLHUP|POLLERR;
+        short sockFlags=(!buf10.isEmpty()?POLLOUT:0)|POLLIN|POLLHUP|POLLERR;
         pollfd fds[]=
         {
-            {sock, POLLIN|POLLHUP|POLLERR, 0},
+            {sock, sockFlags, 0},
             {STDIN_FILENO, POLLIN, 0},
-            {STDOUT_FILENO, POLLHUP|POLLERR, 0},
+            {STDOUT_FILENO, stdoutFlags, 0},
         };
         int nfds=sizeof(fds)/sizeof(fds[0]);
         int n=poll(fds, nfds, -1);
@@ -53,20 +55,20 @@ int mainClient()
                 return 0;
         if(fds[0].revents&POLLIN)
         {
-            ssize_t n;
-            CHECK(n=read(sock,buf,sizeof(buf)));
+            ssize_t n=buf01.read(sock);
             if(n==0)
                 return 0;
-            assert(write(STDOUT_FILENO, buf, n)==n);
         }
+        if(fds[2].revents&POLLOUT)
+            buf01.write(STDOUT_FILENO);
         if(fds[1].revents&POLLIN)
         {
-            ssize_t n;
-            CHECK(n=read(STDIN_FILENO,buf,sizeof(buf)));
+            ssize_t n=buf10.read(STDIN_FILENO);
             if(n==0)
                 return 0;
-            assert(write(sock, buf, n)==n);
         }
+        if(fds[0].revents&POLLOUT)
+            buf10.write(sock);
     }
 }
 

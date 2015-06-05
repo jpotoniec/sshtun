@@ -25,6 +25,14 @@ class Buffer : private boost::noncopyable
             _pos+=n;
             return n;
         }
+        ssize_t write(int fd)
+        {
+            ssize_t n;
+            CHECK(n=::write(fd, _data, _pos));
+            Logger::global()->trace("Sending {}/{} bytes from buffer", n, _pos);
+            remove(n);
+            return n;
+        }
         size_t size() const
         {
             return _size;

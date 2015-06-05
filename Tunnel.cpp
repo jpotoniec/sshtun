@@ -303,10 +303,7 @@ void Tunnel::work()
         }
         if(fds[2].revents&POLLOUT)
         {
-            ssize_t n;
-            CHECK(n=write(localOut, sendBuffer.data(), sendBuffer.length()));
-            Logger::global()->trace("Sending {}/{} bytes from buffer", n, sendBuffer.length());
-            sendBuffer.remove(n);
+            sendBuffer.write(localOut);
         }
     }
     quit:
