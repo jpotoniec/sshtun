@@ -88,9 +88,14 @@ void processClient(int sock)
 
 void startTunnel(const std::string& proxy)
 {
-    Logger::global()->info("Starting tunnel with {}", proxy);
-    Tunnel t(*cfg, po, proxy);
-    t.work();
+    for(;;)
+    {
+        Logger::global()->info("Starting tunnel with {}", proxy);
+        Tunnel t(*cfg, po, proxy);
+        t.work();
+        Logger::global()->info("Tunnel closed, waiting {} before reconnecting", cfg->breakLength());
+        sleep(cfg->breakLength());
+    }
 }
 
 int mainServer(int argc, char **argv)

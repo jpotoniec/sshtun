@@ -47,6 +47,10 @@ public:
     {
         return ini["clients"];
     }
+    int breakLength() const
+    {
+        return 5;   //seconds
+    }
 private:
     std::string _name;
     std::string _proxyCommand;
