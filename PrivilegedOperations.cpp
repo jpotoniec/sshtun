@@ -138,8 +138,10 @@ void PrivilegedOperations::processCreateTunnel(const char *name, const char *loc
     addr={AF_INET, 0, inet_addr(remote)};
     memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
     CHECK(ioctl(helper, SIOCSIFDSTADDR, &ifr));
+    CHECK(ioctl(helper, SIOCGIFFLAGS, &ifr));
+    ifr.ifr_flags|=IFF_UP|IFF_RUNNING;
+    CHECK(ioctl(helper, SIOCSIFFLAGS, &ifr));
     close(helper);
-    sleep(2);   //hack to allow the interface to go up
     send_fd(sock, fd);
     close(fd);
 }
