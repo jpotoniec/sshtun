@@ -30,7 +30,7 @@ int mainClient()
     CHECK(connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
     CHECK(fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK));
     CHECK(fcntl(sock, F_SETFL, O_NONBLOCK));
-    Buffer buf01(70000),buf10(70000);
+    Buffer buf01(7000000),buf10(7000000);
     for(;;)
     {
         short stdoutFlags=(!buf01.isEmpty()?POLLOUT:0)|POLLHUP|POLLERR;

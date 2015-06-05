@@ -57,7 +57,7 @@ Tunnel::Tunnel(const std::string& proxy)
 }
 
 Tunnel::Tunnel()
-    :pid(-1),localIn(-1),localOut(-1),tunnel(-1),buffer(10000),tunBuffer(10000),sendBuffer(140000)
+    :pid(-1),localIn(-1),localOut(-1),tunnel(-1),buffer(1000000),tunBuffer(1000000),sendBuffer(1000000)
 {
 }
 
