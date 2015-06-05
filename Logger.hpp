@@ -13,7 +13,7 @@ public:
     {
         return me.logger;
     }
-    static void configure(const Config& cfg)
+    static void configure()
     {
         std::string ll=cfg.loglevel();
         for(auto i=0;i<=static_cast<int>(spdlog::level::off);++i)

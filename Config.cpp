@@ -3,9 +3,9 @@
 
 const std::string Config::PROXY_ENV="SSHTUN_PROXY_COMMAND";
 
-Config::Config(const IniFile& f)
-    :ini(f)
+void Config::load(const IniFile& f)
 {
+    ini=f;
     _name=ini("name");
     if(_name.empty())
     {

@@ -53,24 +53,24 @@ static pid_t popen2(const char* command, int &in, int &out)
 //    }
 //}
 
-Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po, int client)
-    :Tunnel(cfg, po)
+Tunnel::Tunnel(int client)
+    :Tunnel()
 {
     server=false;
     localIn=client;
     localOut=client;
 }
 
-Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po, const std::string& proxy)
-    :Tunnel(cfg, po)
+Tunnel::Tunnel(const std::string& proxy)
+    :Tunnel()
 {
     server=true;
     pid=popen2(proxy.c_str(), localIn, localOut);
     Register::get().add(pid, localIn);
 }
 
-Tunnel::Tunnel(Config &cfg, PrivilegedOperations& po)
-    :cfg(cfg),po(po),pid(-1),localIn(-1),localOut(-1),tunnel(-1),buffer(10000),tunBuffer(10000)
+Tunnel::Tunnel()
+    :pid(-1),localIn(-1),localOut(-1),tunnel(-1),buffer(10000),tunBuffer(10000)
 {
 }
 
@@ -87,26 +87,26 @@ void Tunnel::init(char *data, size_t len)
         *ptrs[i]='\0';
         ptrs[i]++;
     }
-    tunnel=po.createTunnel(ptrs[0], ptrs[1], ptrs[2]);
+    tunnel=PrivilegedOperations::get().createTunnel(ptrs[0], ptrs[1], ptrs[2]);
 }
 
 void Tunnel::initServer(const char *name, size_t len)
 {
     if(name[len-1]!=0)
         return;
-    std::string remoteIp=cfg.ip(name);
+    std::string remoteIp=Config::get().ip(name);
     if(remoteIp.empty())
     {
         throw std::runtime_error(std::string("Unkown client '")+name+"'");
         return;
     }
-    std::string msg=cfg.name()+SEP+remoteIp+SEP+cfg.ip();
+    std::string msg=Config::get().name()+SEP+remoteIp+SEP+Config::get().ip();
     send(MessageType::DHCP, msg);
-    tunnel=po.createTunnel(name, cfg.ip(), remoteIp);
-    for(auto& i:cfg.others())
+    tunnel=PrivilegedOperations::get().createTunnel(name, Config::get().ip(), remoteIp);
+    for(auto& i:Config::get().others())
         if(name!=i.first)
             send(MessageType::OTHER, i.second);
-    for(auto& i:cfg.clients())
+    for(auto& i:Config::get().clients())
         if(name!=i.first)
             send(MessageType::ROUTE, i.second);
 }
@@ -115,22 +115,15 @@ void Tunnel::other(const char *proxyCommand, size_t len)
 {
     if(proxyCommand[len-1]!='\0')
         return;
-    pid_t pid;
-    CHECK(pid=fork());
-    if(pid==0)
-    {
-        CHECK(setenv(Config::PROXY_ENV.c_str(), proxyCommand, 1));
-        CHECK(execv("/proc/self/exe", argv));
-    }
-    Logger::global()->debug("My child is {}", pid);
-    sleep(10);
+    Logger::global()->trace("Tunnel::other({},{})", proxyCommand, len);
+    std::thread(startTunnel, std::string(proxyCommand)).detach();
 }
 
 void Tunnel::route(const char *data, size_t len)
 {
     if(data[len-1]!=0)
         return;
-    po.addRoute(data);
+    PrivilegedOperations::get().addRoute(data);
 }
 
 void Tunnel::deliver(const char *data, size_t len)
@@ -215,7 +208,7 @@ void Tunnel::handshake()
 {
     if(server)
     {
-        send(MessageType::HANDSHAKE, cfg.name());
+        send(MessageType::HANDSHAKE, Config::get().name());
     }
 }
 
@@ -276,4 +269,16 @@ void Tunnel::work()
     CHECK(::close(tunnel));
     ::close(localIn);
     ::close(localOut);
+}
+
+void Tunnel::startTunnel(const std::string &proxy)
+{
+    for(;;)
+    {
+        Logger::global()->info("Starting tunnel with {}", proxy);
+        Tunnel t(proxy);
+        t.work();
+        Logger::global()->info("Tunnel closed, waiting {} before reconnecting", Config::get().breakLength());
+        sleep(Config::get().breakLength());
+    }
 }

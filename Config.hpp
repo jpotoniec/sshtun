@@ -10,7 +10,12 @@ class Config : boost::noncopyable
 {
 public:
     static const std::string PROXY_ENV;
-    Config(const IniFile& f);
+    static Config& get()
+    {
+        static Config me;
+        return me;
+    }
+    void load(const IniFile& f);
     std::string name() const
     {
         return _name;
@@ -48,6 +53,10 @@ public:
         return 5;   //seconds
     }
 private:
+    Config()
+    {
+
+    }
     std::string _name;
     std::string _proxyCommand;
     IniFile ini;

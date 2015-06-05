@@ -74,34 +74,19 @@ int mainClient(int argc, char **argv)
     }
 }
 
-PrivilegedOperations po;
-Config *cfg;
-
 void processClient(int sock)
 {
     Logger::global()->info("New client happened");
     Logger::global()->trace("socket is {}", sock);
-    Tunnel t(*cfg, po, sock);
+    Tunnel t(sock);
     t.work();
     close(sock);
-}
-
-void startTunnel(const std::string& proxy)
-{
-    for(;;)
-    {
-        Logger::global()->info("Starting tunnel with {}", proxy);
-        Tunnel t(*cfg, po, proxy);
-        t.work();
-        Logger::global()->info("Tunnel closed, waiting {} before reconnecting", cfg->breakLength());
-        sleep(cfg->breakLength());
-    }
 }
 
 int mainServer(int argc, char **argv)
 {
     Logger::global()->info("Started server");
-    po.start();
+    PrivilegedOperations::get().start();
     CHECK(setresgid(1000, 1000, 1000));
     CHECK(setresuid(1000, 1000, 1000));
     Logger::global()->debug("Hi, I am unprivileged and my uid is {}", getuid());
@@ -110,10 +95,10 @@ int mainServer(int argc, char **argv)
         f.load(argv[2]);
     else
         f.load("sshtun.ini");
-    cfg=new Config(f);
-    Logger::configure(*cfg);
-    if(!cfg->proxyCommand().empty())
-        std::thread(startTunnel, cfg->proxyCommand()).detach();
+    Config::get().load(f);
+    Logger::configure();
+    if(!Config::get().proxyCommand().empty())
+        std::thread(Tunnel::startTunnel, Config::get().proxyCommand()).detach();
     int sock;
     CHECK(sock=socket(AF_UNIX, SOCK_SEQPACKET|SOCK_CLOEXEC, 0));
     sockaddr_un addr;
