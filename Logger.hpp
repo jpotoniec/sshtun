@@ -1,7 +1,6 @@
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
 
-#include "Config.hpp"
 #include <spdlog/spdlog.h>
 #include <boost/noncopyable.hpp>
 #include <fstream>
@@ -15,6 +14,7 @@ public:
     }
     static void configure()
     {
+#if 0
         std::string ll=cfg.loglevel();
         for(auto i=0;i<=static_cast<int>(spdlog::level::off);++i)
             if(ll==spdlog::level::level_names[i])
@@ -24,6 +24,7 @@ public:
         {
             me.logger=spdlog::rotating_logger_mt("global", file, 1048576 * 5, 3);
         }
+#endif
     }
 private:
     static Logger me;
@@ -31,6 +32,7 @@ private:
     Logger()
     {
         logger=spdlog::stderr_logger_mt("console");
+        logger->set_level(spdlog::level::trace);
         logger->set_pattern("[thread %t] %+");
     }
 };
