@@ -1,0 +1,15 @@
+If an ssh user has sshtun as a shell, a file ~/.hushlogin must exist to prevent motd from breaking the comunication.
+
+Installing on a new system:
+1. Compile
+2. Create a new user: adduser --system --disabled-password sshvpn
+3. Configure:
+	On a node that can be connected:
+	1. Set sshvpn as a shell of sshvpn user
+	2. Create ~sshvpn/.hushlogin
+	3. Fill ~sshvpn/.ssh/authorized_keys
+
+	On a node that can make outgoing connections:
+	1. Fill ~sshvpn/.ssh/known_hosts
+	2. Copy private key (~sshvpn/.ssh/id_rsa)
+4. Run: sudo sshvpn --server config.ini
