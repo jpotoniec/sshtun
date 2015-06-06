@@ -30,6 +30,10 @@ static pid_t popen2(const char* command, int &in, int &out, const std::string& n
     {
         CHECK(dup2(cmdoutput[1], STDOUT_FILENO));
         CHECK(dup2(cmdinput[0], STDIN_FILENO));
+        WARN(close(cmdinput[0]));
+        WARN(close(cmdinput[1]));
+        WARN(close(cmdoutput[0]));
+        WARN(close(cmdoutput[1]));
         WARN(setenv("NAME", name.c_str(), 1));
         for(auto &i:Config::get().env())
             WARN(setenv(i.first.c_str(), i.second.c_str(), 1));
@@ -45,7 +49,9 @@ static pid_t popen2(const char* command, int &in, int &out, const std::string& n
     }
     else
     {
+        WARN(close(cmdoutput[1]));
         in=cmdoutput[0];
+        WARN(close(cmdinput[0]));
         out=cmdinput[1];
     }
     return pid;
