@@ -51,3 +51,9 @@ void Config::addClient(const std::string& name, const std::string& ip)
     Lock lock(mutex);
     _clients[name]=ip;
 }
+
+Config::Config()
+    :_breakLength(5),_router(false),_unprivilegedUser("sshtun"),_loglevel("info")
+{
+    _env["SSH"]="ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o TCPKeepAlive=yes -o EscapeChar=none -o PasswordAuthentication=no -o RequestTTY=no";
+}

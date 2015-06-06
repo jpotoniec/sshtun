@@ -98,11 +98,7 @@ private:
     typedef std::mutex Mutex;
     typedef std::lock_guard<Mutex> Lock;
     mutable Mutex mutex;
-    Config()
-        :_breakLength(5),_router(false),_unprivilegedUser("sshtun"),_loglevel("info")
-    {
-        _env["SSH"]="ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o TCPKeepAlive=yes -o EscapeChar=none -o PasswordAuthentication=no";
-    }
+    Config();
     std::string _name;
     std::string _proxyCommand;
     std::string _ip;
