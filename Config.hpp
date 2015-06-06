@@ -101,7 +101,7 @@ private:
     Config()
         :_breakLength(5),_router(false),_unprivilegedUser("sshtun"),_loglevel("info")
     {
-        _env["SSH"]="ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o TCPKeepAlive=yes";
+        _env["SSH"]="ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o TCPKeepAlive=yes -o EscapeChar=none -o PasswordAuthentication=no";
     }
     std::string _name;
     std::string _proxyCommand;
