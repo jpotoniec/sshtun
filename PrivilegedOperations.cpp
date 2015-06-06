@@ -74,16 +74,6 @@ static int recv_fd(int sock)
     return fd;
 }
 
-std::ostream& operator<<(std::ostream& o, const sockaddr_in &addr)
-{
-    char host[128],port[128];
-    int n=getnameinfo(reinterpret_cast<const sockaddr*>(&addr), sizeof(addr), host, sizeof(host), port, sizeof(port), NI_NUMERICHOST|NI_NUMERICSERV);
-    if(n==0)
-        return o<<host<<":"<<port;
-    else
-        return o<<"?:?";
-}
-
 void PrivilegedOperations::work()
 {
     for(;;)
@@ -158,7 +148,7 @@ void PrivilegedOperations::processAddRoute(const char *route)
         CHECK(execlp("ip","ip","r","a",route,"via",router.c_str(),"metric","100", NULL));
         exit(0);
     }
-    waitpid(pid, NULL, 0);
+    WARN(waitpid(pid, NULL, 0));
 }
 
 void PrivilegedOperations::start()
