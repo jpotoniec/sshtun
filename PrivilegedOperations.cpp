@@ -157,7 +157,7 @@ void PrivilegedOperations::processAddRoute(const char *route, const char *router
 void PrivilegedOperations::start()
 {
     int sockets[2];
-    socketpair(PF_LOCAL, SOCK_SEQPACKET, 0, sockets);
+    CHECK(socketpair(PF_LOCAL, SOCK_SEQPACKET, 0, sockets));
     pid_t pid;
     CHECK(pid=fork());
     if(pid==0)
