@@ -33,49 +33,44 @@ struct Packet
 
 static void send_fd(int sock, int fd)
 {
-    struct msghdr msg = {0};
+    struct msghdr msg;
+    memset(&msg, 0, sizeof(msg));
     struct cmsghdr *cmsg;
-    int myfds[]={fd}; /* Contains the file descriptors to pass. */
-    int NUM_FD=sizeof(myfds)/sizeof(myfds[0]);
-    char buf[CMSG_SPACE(sizeof myfds)];  /* ancillary data buffer */
-    int *fdptr;
+    char buf[CMSG_SPACE(sizeof(fd))];  /* ancillary data buffer */
 
     msg.msg_control = buf;
     msg.msg_controllen = sizeof buf;
     cmsg = CMSG_FIRSTHDR(&msg);
     cmsg->cmsg_level = SOL_SOCKET;
     cmsg->cmsg_type = SCM_RIGHTS;
-    cmsg->cmsg_len = CMSG_LEN(sizeof(int) * NUM_FD);
+    cmsg->cmsg_len = CMSG_LEN(sizeof(fd));
     /* Initialize the payload: */
-    fdptr = (int *) CMSG_DATA(cmsg);
-    memcpy(fdptr, myfds, NUM_FD * sizeof(int));
+    memcpy(CMSG_DATA(cmsg), &fd, sizeof(fd));
     /* Sum of the length of all control messages in the buffer: */
     msg.msg_controllen = cmsg->cmsg_len;
-    ssize_t n=sendmsg(sock, &msg, 0);
-    Logger::global()->debug("Send tunnel descriptor {} in packet of {} bytes", fd, n);
+    CHECK(sendmsg(sock, &msg, 0));
+    Logger::global()->debug("Send tunnel descriptor {}", fd);
 }
 
 static int recv_fd(int sock)
 {
-    struct msghdr msg = {0};
+    struct msghdr msg;
+    memset(&msg, 0, sizeof(msg));
     struct cmsghdr *cmsg;
-    int myfds[1]; /* Contains the file descriptors to pass. */
-    int NUM_FD=sizeof(myfds)/sizeof(myfds[0]);
-    char buf[CMSG_SPACE(sizeof myfds)];  /* ancillary data buffer */
-    int *fdptr;
+    int fd;
+    char buf[CMSG_SPACE(sizeof(fd))];  /* ancillary data buffer */
 
     msg.msg_control = buf;
-    msg.msg_controllen = sizeof buf;
+    msg.msg_controllen = sizeof(buf);
     cmsg = CMSG_FIRSTHDR(&msg);
     cmsg->cmsg_level = SOL_SOCKET;
     cmsg->cmsg_type = SCM_RIGHTS;
-    cmsg->cmsg_len = CMSG_LEN(sizeof(int) * NUM_FD);
+    cmsg->cmsg_len = CMSG_LEN(sizeof(fd));
     /* Sum of the length of all control messages in the buffer: */
     msg.msg_controllen = cmsg->cmsg_len;
-    ssize_t n=recvmsg(sock, &msg, 0);
-    fdptr = (int *) CMSG_DATA(cmsg);
-    int fd=fdptr[0];
-    Logger::global()->debug("Recv tunnel descriptor {} in packet of {} bytes", fd, n);
+    CHECK(recvmsg(sock, &msg, 0));
+    fd=*reinterpret_cast<int*>(CMSG_DATA(cmsg));
+    Logger::global()->debug("Recv tunnel descriptor {}", fd);
     return fd;
 }
 
