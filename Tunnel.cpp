@@ -30,7 +30,9 @@ static pid_t popen2(const char* command, int &in, int &out, const std::string& n
     {
         CHECK(dup2(cmdoutput[1], STDOUT_FILENO));
         CHECK(dup2(cmdinput[0], STDIN_FILENO));
-        setenv("NAME", name.c_str(), 1);
+        WARN(setenv("NAME", name.c_str(), 1));
+        for(auto &i:Config::get().env())
+            WARN(setenv(i.first.c_str(), i.second.c_str(), 1));
         if(Logger::isDebugEnabled())
         {
             for(char **ptr=environ;*ptr;ptr++)

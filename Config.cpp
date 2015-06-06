@@ -38,6 +38,7 @@ void Config::load(const IniFile& ini)
     _loglevel=ini("","loglevel",_loglevel);
     _unprivilegedUser=ini("","user",_unprivilegedUser);
     _breakLength=toInt(ini("","break",""), _breakLength);
+    append(_env, ini["env"]);
     if(_ip.empty()==_proxyCommand.empty())
         throw ConfigError("Exactly one value must be defined: `ip' or `server'");
     if(_ip.empty() && _router)

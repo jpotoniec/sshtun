@@ -18,6 +18,7 @@ public:
 class Config : boost::noncopyable
 {
 public:
+    typedef std::map<std::string, std::string> Map;
     static Config& get()
     {
         static Config me;
@@ -58,7 +59,7 @@ public:
         else
             return "";
     }
-    std::map<std::string,std::string> others() const
+    Map others() const
     {
         Lock lock(mutex);
         return _others;
@@ -90,6 +91,11 @@ public:
         Lock lock(mutex);
         return _unprivilegedUser;
     }
+    Map env() const
+    {
+        Lock lock(mutex);
+        return _env;
+    }
 private:
     typedef std::mutex Mutex;
     typedef std::lock_guard<Mutex> Lock;
@@ -97,16 +103,17 @@ private:
     Config()
         :_breakLength(5),_router(false),_unprivilegedUser("sshtun"),_loglevel("info")
     {
-
+        _env["SSH"]="ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o TCPKeepAlive=yes";
     }
     std::string _name;
     std::string _proxyCommand;
     std::string _ip;
-    std::map<std::string,std::string> _clients,_others;
+    Map _clients,_others;
     int _breakLength;
     bool _router;
     std::string _unprivilegedUser;
     std::string _loglevel;
+    Map _env;
 };
 
 #endif // CONFIG_HPP
