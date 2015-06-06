@@ -118,6 +118,16 @@ void PrivilegedOperations::work()
     exit(0);
 }
 
+static void fill(sockaddr &dst, const std::string& ip)
+{
+    sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family=AF_INET;
+    in_addr_t x=inet_addr(ip.c_str());
+    memcpy(&addr.sin_addr, &x, sizeof(x));
+    memcpy(&dst, &addr, sizeof(addr));
+}
+
 void PrivilegedOperations::processCreateTunnel(const char *name, const char *local, const char *remote)
 {
     this->router=remote;
@@ -131,12 +141,9 @@ void PrivilegedOperations::processCreateTunnel(const char *name, const char *loc
     CHECK(ioctl(fd, TUNSETIFF, &ifr));
     CHECK(fcntl(fd, F_SETFL, O_NONBLOCK));
     CHECK(helper=socket(PF_INET, SOCK_DGRAM, IPPROTO_IP));
-    sockaddr_in addr;
-    addr={AF_INET, 0, inet_addr(local)};
-    memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
+    fill(ifr.ifr_addr, local);
     CHECK(ioctl(helper, SIOCSIFADDR, &ifr));
-    addr={AF_INET, 0, inet_addr(remote)};
-    memcpy(&ifr.ifr_addr, &addr, sizeof(addr));
+    fill(ifr.ifr_addr, remote);
     CHECK(ioctl(helper, SIOCSIFDSTADDR, &ifr));
     CHECK(ioctl(helper, SIOCGIFFLAGS, &ifr));
     ifr.ifr_flags|=IFF_UP|IFF_RUNNING;
