@@ -68,12 +68,10 @@ public:
     {
         return _proxyCommand;
     }
-    template<typename Fn>
-    void clients(Fn f)
+    Map clients() const
     {
         Lock lock(mutex);
-        for(auto &i:_clients)
-            f(i.first, i.second);
+        return _clients;
     }
     void addClient(const std::string& name, const std::string& ip);
     int breakLength() const
