@@ -13,6 +13,10 @@ public:
     {
         return me.logger;
     }
+    static bool isDebugEnabled()
+    {
+        return global()->should_log(spdlog::level::debug);
+    }
     static void configure()
     {
         std::string ll=Config::get().loglevel();

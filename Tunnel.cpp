@@ -31,6 +31,14 @@ static pid_t popen2(const char* command, int &in, int &out, const std::string& n
         CHECK(dup2(cmdoutput[1], STDOUT_FILENO));
         CHECK(dup2(cmdinput[0], STDIN_FILENO));
         setenv("NAME", name.c_str(), 1);
+        if(Logger::isDebugEnabled())
+        {
+            for(char **ptr=environ;*ptr;ptr++)
+                Logger::global()->debug("env: {}", *ptr);
+            char buf[PATH_MAX+1];
+            if(getcwd(buf, sizeof(buf))!=NULL)
+                Logger::global()->debug("cwd={}",buf);
+        }
         execl("/bin/sh", "sh", "-c", command, NULL);
     }
     else
