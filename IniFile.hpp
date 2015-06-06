@@ -8,11 +8,7 @@ class IniFile
 public:
     typedef std::map<std::string,std::string> Section;
     void load(const std::string& file);
-    std::string operator()(const std::string& key) const
-    {
-        return operator()("", key);
-    }
-    std::string operator()(const std::string& section, const std::string& key) const
+    std::string operator()(const std::string& section, const std::string& key, const std::string& def="") const
     {
         auto i=values.find(section);
         if(i!=values.end())
@@ -21,7 +17,7 @@ public:
             if(j!=i->second.end())
                 return j->second;
         }
-        return "";
+        return def;
     }
     Section operator[](const std::string& section) const
     {

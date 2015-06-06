@@ -7,6 +7,14 @@
 #include <boost/noncopyable.hpp>
 #include <mutex>
 
+class ConfigError : public std::logic_error
+{
+public:
+    ConfigError(const std::string& what)
+        :std::logic_error(what)
+    { }
+};
+
 class Config : boost::noncopyable
 {
 public:
@@ -18,6 +26,7 @@ public:
     void load(const IniFile& f);
     std::string name() const
     {
+        Lock lock(mutex);
         return _name;
     }
     std::string ip() const
@@ -32,15 +41,13 @@ public:
     }
     std::string loglevel() const
     {
-        std::string s=ini("loglevel");
-        if(!s.empty())
-            return s;
-        else
-            return "info";
+        Lock lock(mutex);
+        return _loglevel;
     }
     std::string logfile() const
     {
-        return ini("logfile");
+        throw std::runtime_error("logfile()");
+//        return ini("logfile");
     }
     std::string ip(const std::string& client) const
     {
@@ -53,7 +60,8 @@ public:
     }
     std::map<std::string,std::string> others() const
     {
-        return ini["others"];
+        Lock lock(mutex);
+        return _others;
     }
     std::string proxyCommand() const
     {
@@ -69,40 +77,36 @@ public:
     void addClient(const std::string& name, const std::string& ip);
     int breakLength() const
     {
-        return 5;   //seconds
+        Lock lock(mutex);
+        return _breakLength;
     }
     bool isRouter() const
     {
-        return toInt(ini("router"),0);
+        Lock lock(mutex);
+        return _router;
     }
     std::string unprivilegedUser() const
     {
-        return "smaug";
+        Lock lock(mutex);
+        return _unprivilegedUser;
     }
 private:
     typedef std::mutex Mutex;
     typedef std::lock_guard<Mutex> Lock;
     mutable Mutex mutex;
     Config()
+        :_breakLength(5),_router(false),_unprivilegedUser("sshtun"),_loglevel("info")
     {
 
     }
     std::string _name;
     std::string _proxyCommand;
-    IniFile ini;
     std::string _ip;
-    std::map<std::string,std::string> _clients;
-    int toInt(const std::string& value, int def) const
-    {
-        try
-        {
-            return std::stoi(value);
-        }
-        catch(const std::exception&)
-        {
-            return def;
-        }
-    }
+    std::map<std::string,std::string> _clients,_others;
+    int _breakLength;
+    bool _router;
+    std::string _unprivilegedUser;
+    std::string _loglevel;
 };
 
 #endif // CONFIG_HPP
