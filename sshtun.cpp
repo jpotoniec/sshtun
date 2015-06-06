@@ -10,6 +10,7 @@
 #include <poll.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 const char SOCKET_PATH[]="/tmp/sshtun.sock";
 
@@ -93,6 +94,7 @@ void processClient(int sock)
 
 
 #include <pwd.h>
+#include <grp.h>
 void dropPrivileges()
 {
     errno=0;
@@ -101,12 +103,15 @@ void dropPrivileges()
         throw LibcError("getpwnam");
     uid_t uid=p->pw_uid;
     gid_t gid=p->pw_gid;
-    CHECK(setresgid(uid, uid, uid));
-    CHECK(setresuid(gid, gid, gid));
-     //no check, not crucial
-    clearenv();
-    setenv("HOME", p->pw_dir, 1);
-    chdir(p->pw_dir);
+    CHECK(setgroups(0, NULL));
+    CHECK(setresgid(gid, gid, gid));
+    CHECK(setresuid(uid, uid, uid));
+    WARN(clearenv());
+    WARN(setenv("HOME", p->pw_dir, 1));
+    WARN(setenv("PWD", p->pw_dir, 1));
+    WARN(setenv("USER", Config::get().unprivilegedUser().c_str(), 1));
+    WARN(setenv("USERNAME", Config::get().unprivilegedUser().c_str(), 1));
+    WARN(chdir(p->pw_dir));
 }
 
 int mainServer(int argc, char **argv)
@@ -130,6 +135,7 @@ int mainServer(int argc, char **argv)
     sensibleCopy(addr.sun_path,SOCKET_PATH,sizeof(addr.sun_path));
     unlink(addr.sun_path);
     CHECK(bind(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
+    CHECK(fchmod(sock, S_IRUSR|S_IWUSR|S_IXUSR));
     CHECK(listen(sock, 10));
     for(;;)
     {
