@@ -45,7 +45,8 @@ static pid_t popen2(const char* command, int &in, int &out, const std::string& n
             if(getcwd(buf, sizeof(buf))!=NULL)
                 Logger::global()->debug("cwd={}",buf);
         }
-        execl("/bin/sh", "sh", "-c", command, NULL);
+        CHECK(execl("/bin/sh", "sh", "-c", command, NULL));
+        exit(0);
     }
     else
     {
