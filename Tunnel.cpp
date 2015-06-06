@@ -116,6 +116,7 @@ void Tunnel::init(char *data, size_t len)
         ptrs[i]++;
     }
     Config::get().setIp(ptrs[1]);
+    this->remoteIp=ptrs[2];
     tunnel=PrivilegedOperations::get().createTunnel(ptrs[0], ptrs[1], ptrs[2]);
 }
 
@@ -165,7 +166,9 @@ void Tunnel::route(const char *data, size_t len)
 {
     if(data[len-1]!=0)
         return;
-    PrivilegedOperations::get().addRoute(data);
+    if(remoteIp.empty())
+        return;
+    PrivilegedOperations::get().addRoute(data, remoteIp);
 }
 
 void Tunnel::deliver(const char *data, size_t len)

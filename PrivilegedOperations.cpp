@@ -27,7 +27,11 @@ struct Packet
             char local[32];
             char remote[32];
         } tunnel;
-        char route[64];
+        struct
+        {
+            char route[32];
+            char router[32];
+        } route;
     };
 };
 
@@ -92,7 +96,7 @@ void PrivilegedOperations::work()
             }
             if(p.type==Packet::Type::ADD_ROUTE)
             {
-                processAddRoute(p.route);
+                processAddRoute(p.route.route, p.route.router);
             }
         }
         catch(const std::exception &e)
@@ -115,7 +119,6 @@ static void fill(sockaddr &dst, const std::string& ip)
 
 void PrivilegedOperations::processCreateTunnel(const char *name, const char *local, const char *remote)
 {
-    this->router=remote;
     Logger::global()->info("Setting up tunnel {}: {} -> {}", name, local, remote);
     int fd,helper;
     CHECK(fd=open("/dev/net/tun",O_RDWR|O_CLOEXEC));
@@ -138,14 +141,14 @@ void PrivilegedOperations::processCreateTunnel(const char *name, const char *loc
     close(fd);
 }
 
-void PrivilegedOperations::processAddRoute(const char *route)
+void PrivilegedOperations::processAddRoute(const char *route, const char *router)
 {
     Logger::global()->info("Adding route {} via {}", route, router);
     pid_t pid;
     CHECK(pid=fork());
     if(pid==0)
     {
-        CHECK(execlp("ip","ip","r","a",route,"via",router.c_str(),"metric","100", NULL));
+        CHECK(execlp("ip","ip","r","a",route,"via",router,"metric","100", NULL));
         exit(0);
     }
     WARN(waitpid(pid, NULL, 0));
@@ -183,11 +186,12 @@ int PrivilegedOperations::createTunnel(const std::string& name, const std::strin
     return recv_fd(sock);
 }
 
-void PrivilegedOperations::addRoute(const std::string &route)
+void PrivilegedOperations::addRoute(const std::string &route, const std::string& router)
 {
     Packet p;
     memset(&p,0,sizeof(p));
     p.type=Packet::Type::ADD_ROUTE;
-    sensibleCopy(p.route,route.c_str(),sizeof(p.route));
+    sensibleCopy(p.route.route,route.c_str(),sizeof(p.route.route));
+    sensibleCopy(p.route.router,router.c_str(),sizeof(p.route.router));
     CHECK(send(sock, &p, sizeof(p), 0));
 }

@@ -25,6 +25,7 @@ class Tunnel
         int localIn,localOut,tunnel;
         Buffer buffer,tunBuffer,sendBuffer;
         bool server;
+        std::string remoteIp;
         Tunnel(const ProxyConfig& proxy);
         Tunnel();
         void send(MessageType type, const char *data, uint16_t len);
