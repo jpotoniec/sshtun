@@ -95,6 +95,7 @@ void processClient(int sock)
 #include <pwd.h>
 void dropPrivileges()
 {
+    errno=0;
     passwd *p=getpwnam(Config::get().unprivilegedUser().c_str());
     if(p==NULL)
         throw LibcError("getpwnam");

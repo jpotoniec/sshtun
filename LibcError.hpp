@@ -13,6 +13,6 @@ class LibcError : public std::runtime_error
         }
 };
 
-#define CHECK(call) if((call)<0) { throw LibcError(#call); }
+#define CHECK(call) do { errno=0; if((call)<0) { throw LibcError(#call); } } while(0)
 
 #endif // LIBCERROR_HPP
