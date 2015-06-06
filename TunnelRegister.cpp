@@ -15,5 +15,6 @@ void TunnelRegister::startTunnelThread(const std::string& name, const std::strin
             return;
     }
     Lock lock(mutex);
-    std::thread(Tunnel::startTunnel, proxy).detach();
+    ProxyConfig cfg={name, proxy};
+    std::thread(Tunnel::startTunnel, cfg).detach();
 }

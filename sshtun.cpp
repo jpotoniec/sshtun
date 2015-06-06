@@ -2,6 +2,7 @@
 #include "IniFile.hpp"
 #include "PrivilegedOperations.hpp"
 #include "Utils.hpp"
+#include "TunnelRegister.hpp"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -101,6 +102,10 @@ void dropPrivileges()
     gid_t gid=p->pw_gid;
     CHECK(setresgid(uid, uid, uid));
     CHECK(setresuid(gid, gid, gid));
+     //no check, not crucial
+    clearenv();
+    setenv("HOME", p->pw_dir, 1);
+    chdir(p->pw_dir);
 }
 
 int mainServer(int argc, char **argv)
@@ -115,7 +120,7 @@ int mainServer(int argc, char **argv)
     dropPrivileges();
     Logger::global()->debug("Hi, I am unprivileged and my uid is {}", getuid());
     if(!Config::get().proxyCommand().empty())
-        std::thread(Tunnel::startTunnel, Config::get().proxyCommand()).detach();
+        TunnelRegister::startTunnelThread("", Config::get().proxyCommand());
     int sock;
     CHECK(sock=socket(AF_UNIX, SOCK_SEQPACKET|SOCK_CLOEXEC, 0));
     sockaddr_un addr;

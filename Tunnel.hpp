@@ -5,6 +5,13 @@
 #include "Config.hpp"
 #include "PrivilegedOperations.hpp"
 
+struct ProxyConfig
+{
+public:
+    std::string name;
+    std::string command;
+};
+
 class Tunnel
 {
     public:
@@ -12,13 +19,13 @@ class Tunnel
         Tunnel(int client);
         ~Tunnel();
         void work();
-        static void startTunnel(const std::string& proxy);
+        static void startTunnel(const ProxyConfig& proxy);
     private:
         pid_t pid;
         int localIn,localOut,tunnel;
         Buffer buffer,tunBuffer,sendBuffer;
         bool server;
-        Tunnel(const std::string& proxy);
+        Tunnel(const ProxyConfig& proxy);
         Tunnel();
         void send(MessageType type, const char *data, uint16_t len);
         void send(MessageType type, const std::string& data)

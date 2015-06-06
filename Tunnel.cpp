@@ -19,7 +19,7 @@
 
 const char SEP='\x01';
 
-static pid_t popen2(const char* command, int &in, int &out)
+static pid_t popen2(const char* command, int &in, int &out, const std::string& name)
 {
     int cmdinput[2],cmdoutput[2];
     CHECK(pipe(cmdinput));	//blocking
@@ -30,6 +30,7 @@ static pid_t popen2(const char* command, int &in, int &out)
     {
         CHECK(dup2(cmdoutput[1], STDOUT_FILENO));
         CHECK(dup2(cmdinput[0], STDIN_FILENO));
+        setenv("NAME", name.c_str(), 1);
         execl("/bin/sh", "sh", "-c", command, NULL);
     }
     else
@@ -48,11 +49,11 @@ Tunnel::Tunnel(int client)
     localOut=client;
 }
 
-Tunnel::Tunnel(const std::string& proxy)
+Tunnel::Tunnel(const ProxyConfig& proxy)
     :Tunnel()
 {
     server=true;
-    pid=popen2(proxy.c_str(), localIn, localOut);
+    pid=popen2(proxy.command.c_str(), localIn, localOut, proxy.name);
     Register::get().add(pid, localIn);
 }
 
@@ -310,11 +311,11 @@ void Tunnel::work()
     close();
 }
 
-void Tunnel::startTunnel(const std::string &proxy)
+void Tunnel::startTunnel(const ProxyConfig &proxy)
 {
     for(;;)
     {
-        Logger::global()->info("Starting tunnel with {}", proxy);
+        Logger::global()->info("Starting tunnel to {} with {}", proxy.name, proxy.command);
         Tunnel t(proxy);
         try
         {
