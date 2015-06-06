@@ -19,7 +19,6 @@ class Buffer : private boost::noncopyable
         ssize_t read(int fd)
         {
             ssize_t n=::read(fd, _data+_pos, _size-_pos);
-            Logger::global()->trace("read {}",n);
             if(n==-1)
                 throw LibcError("read");
             _pos+=n;
@@ -30,7 +29,6 @@ class Buffer : private boost::noncopyable
             const size_t max=63000;
             ssize_t n;
             CHECK(n=::write(fd, _data, std::min(_pos,max)));
-            Logger::global()->trace("Sending {}/{} bytes from buffer", n, _pos);
             remove(n);
             return n;
         }

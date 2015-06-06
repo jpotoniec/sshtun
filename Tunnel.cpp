@@ -283,7 +283,6 @@ void Tunnel::work()
         };
         int nfds=sizeof(fds)/sizeof(fds[0]);
         int n=poll(fds, nfds, -1);
-        Logger::global()->trace("poll={} [{:x} {:x} {:x}]", n, fds[0].revents, fds[1].revents, fds[2].revents);
         if(n<0)
         {
             if(errno==EINTR)
@@ -306,11 +305,9 @@ void Tunnel::work()
         if(fds[1].revents&POLLIN)	// zdalny pakiet, przetworzyc i wykonac albo dostarczyc
         {
             buffer.read(localIn);
-            Logger::global()->trace("len={0}=0x{0:x}", buffer.length());
             while(buffer.length()>=3)
             {
                 size_t len=ntohs(*reinterpret_cast<const uint16_t*>(buffer.data()+1));
-                Logger::global()->trace("Packet length {0}=0x{0:x}, buffer length {1}=0x{1:x}", len, buffer.length());
                 size_t whole=len+3;
                 if(buffer.length()>=whole)
                 {
