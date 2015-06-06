@@ -14,5 +14,6 @@ class LibcError : public std::runtime_error
 };
 
 #define CHECK(call) do { errno=0; if((call)<0) { throw LibcError(#call); } } while(0)
+#define WARN(call) do { errno=0; if((call)<0) { Logger::global()->warn("{} failed: {} ({})", #call, errno, strerror(errno)); } } while(0)
 
 #endif // LIBCERROR_HPP
